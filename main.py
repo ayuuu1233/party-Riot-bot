@@ -12,6 +12,7 @@ from telegram.ext import (
 from youtube_transcript_api import YouTubeTranscriptApi
 import google.generativeai as genai
 from keep_alive import keep_alive
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # ================== 1. SETUP & CONFIG ==================
 logging.basicConfig(
@@ -23,7 +24,12 @@ logger = logging.getLogger(__name__)
 # Environment Variables
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
+
+# Validate ADMIN_ID
+ADMIN_ID_STR = os.getenv("ADMIN_ID")
+if not ADMIN_ID_STR:
+    raise ValueError("❌ ADMIN_ID environment variable is required!")
+ADMIN_ID = int(ADMIN_ID_STR)
 
 # Gemini Setup
 genai.configure(api_key=GEMINI_API_KEY)
@@ -35,6 +41,7 @@ user_data = {}
 user_cooldown = defaultdict(lambda: datetime.min)
 user_history = defaultdict(list)
 request_counts = defaultdict(int)
+last_reset_time = datetime.now()
 
 # Cooldown settings (seconds)
 COOLDOWN_SECONDS = 5
@@ -116,19 +123,22 @@ def check_rate_limit(user_id):
     
     # Check cooldown
     if current_time - last_request < timedelta(seconds=COOLDOWN_SECONDS):
-        return False, f"⏳ Thoda wait kar bhai! {COOLDOWN_SECONDS}s mein ek request."
+        remaining = COOLDOWN_SECONDS - int((current_time - last_request).total_seconds())
+        return False, f"⏳ Thoda wait kar bhai! {remaining}s mein request kar."
     
     # Check hourly limit
     if request_counts[user_id] >= MAX_REQUESTS_PER_HOUR:
+        remaining = MAX_REQUESTS_PER_HOUR - request_counts[user_id]
         return False, f"⚠️ Bhai, tune {MAX_REQUESTS_PER_HOUR} requests kar diye! 1 ghante baad try kar."
     
     return True, "OK"
 
-def reset_daily_limits():
-    """Reset daily request counts (call this daily)"""
-    global request_counts
+def reset_hourly_limits():
+    """Reset hourly request counts"""
+    global request_counts, last_reset_time
     request_counts.clear()
-    logger.info("Daily limits reset!")
+    last_reset_time = datetime.now()
+    logger.info("🔄 Hourly limits reset! All users can make requests again.")
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -175,7 +185,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-          image_url = "https://i.ibb.co/6R0D5fT/gojo-static.jpg"
+        image_url = "https://i.ibb.co/6R0D5fT/gojo-static.jpg"
         try:
             await update.message.reply_photo(
                 photo=image_url,
@@ -296,13 +306,14 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(status_text, parse_mode='Markdown')
 
 async def feedback_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Feedback handler"""
-    feedback_text = (
+    """Feedback handler - prompts user to send feedback"""
+    await update.message.reply_text(
         "📝 *Feedback Bhej De!*\n\n"
-        "Apni feedback likha kar bhej. "
+        "Bas apni feedback likha kar bhej. "
         "Improvements ke liye appreciate karte hain! 🙏"
     )
-    await update.message.reply_text(feedback_text, parse_mode='Markdown')
+    # Set a conversation state to handle the next message as feedback
+    return "waiting_for_feedback"
 
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin command to view detailed stats"""
@@ -319,7 +330,8 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👥 Total Active Users: {stats['total_users']}\n"
         f"⚠️ Total Errors: {stats['errors']}\n"
         f"👤 Unique Users Tracked: {len(user_data)}\n"
-        f"🔄 Active Sessions: {len([u for u in request_counts if request_counts[u] > 0])}\n\n"
+        f"��� Active Sessions: {len([u for u in request_counts if request_counts[u] > 0])}\n"
+        f"⏰ Last Reset: {last_reset_time.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
         f"📅 Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     )
     await update.message.reply_text(admin_text, parse_mode='Markdown')
@@ -334,7 +346,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Check rate limit
         is_allowed, message = check_rate_limit(user_id)
         if not is_allowed:
-            await update.message.reply_text(f"⏳ {message}")
+            await update.message.reply_text(f"{message}")
             return
         
         # Extract video ID
@@ -396,12 +408,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Bas ek minute! ⏳"
             )
         
-        # Generate summary
+        # Generate summary with smart truncation
+        max_transcript_length = 100000
+        truncated_transcript = transcript[:max_transcript_length]
+        
         prompt = (
             f"Mujhe iss YouTube video ke liye VERY DETAILED SUMMARY "
             f"Hinglish mein chahiye. Sab important points cover kar. "
             f"Heading ke sath acha structure bana. "
-            f"Video transcript:\n\n{transcript[:80000]}"
+            f"Video transcript:\n\n{truncated_transcript}"
         )
         
         response = model.generate_content(prompt)
@@ -457,14 +472,28 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle feedback messages"""
     try:
-        # In production, you'd save this to a database or file
+        user_id = update.message.from_user.id
         feedback = update.message.text
-        logger.info(f"Feedback from {update.message.from_user.id}: {feedback}")
+        
+        # Log feedback
+        logger.info(f"📝 Feedback from {user_id}: {feedback}")
+        
+        # Send confirmation to user
         await update.message.reply_text(
             "✅ *Feedback mil gaya!*\n\n"
             "Shukriya bhai! Apki feedback zaruri hai. 🙏\n"
             "Jaldi improve karenge! 💪"
         )
+        
+        # Optionally send to admin
+        try:
+            await context.bot.send_message(
+                chat_id=ADMIN_ID,
+                text=f"📝 *New Feedback*\n\nUser ID: {user_id}\nMessage: {feedback[:500]}"
+            )
+        except:
+            pass
+            
     except Exception as e:
         logger.error(f"Feedback handler error: {e}")
 
@@ -473,16 +502,18 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle errors"""
     logger.error(f"Update {update} caused error {context.error}")
     try:
-        await context.bot.send_message(
-            chat_id=ADMIN_ID,
-            text=f"⚠️ Bot Error:\n\n{str(context.error)[:500]}"
-        )
+        if ADMIN_ID:
+            await context.bot.send_message(
+                chat_id=ADMIN_ID,
+                text=f"⚠️ *Bot Error:*\n\n```\n{str(context.error)[:500]}\n```",
+                parse_mode='Markdown'
+            )
     except:
         pass
 
 # ================== 7. MAIN APPLICATION ==================
 def main():
-    """Start the bot"""
+    """Start the bot with APScheduler for hourly resets"""
     try:
         logger.info("🚀 Starting AI YouTube Summarizer Bot 2.0...")
         
@@ -500,6 +531,12 @@ def main():
         # Error handler
         app.add_error_handler(error_handler)
         
+        # Setup APScheduler for hourly limit resets
+        scheduler = AsyncIOScheduler()
+        scheduler.add_job(reset_hourly_limits, 'interval', hours=1)
+        scheduler.start()
+        logger.info("⏰ APScheduler started - Hourly limits will reset every hour")
+        
         # Keep alive
         keep_alive()
         
@@ -508,6 +545,7 @@ def main():
         
     except Exception as e:
         logger.error(f"Failed to start bot: {e}")
+        raise
 
 if __name__ == '__main__':
     main()
