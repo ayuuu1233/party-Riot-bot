@@ -1,4 +1,5 @@
 python-telegram-bot
-youtube-transcript-api
+youtube-transcript_api
 google-generativeai
 flask
+apscheduler
