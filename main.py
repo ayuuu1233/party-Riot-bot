@@ -1,122 +1,99 @@
 import os
-import tempfile
-import logging
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api.formatters import TextFormatter
-import google.generativeai as genai
-import whisper
 import re
+import asyncio
+import logging
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from youtube_transcript_api import YouTubeTranscriptApi
+import google.generativeai as genai
 from keep_alive import keep_alive
 
-# Setup logging
+# 1. Setup Logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-# Setup Gemini
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+# 2. Environment Variables
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+# 3. Gemini Setup
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-pro')
 
-# Load whisper model globally to save time
-# Using base or tiny to ensure it responds within 30 seconds
-whisper_model = whisper.load_model("tiny")
-
-def get_youtube_id(url):
+# 4. Helper Functions
+def get_video_id(url):
     pattern = r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})'
     match = re.search(pattern, url)
     return match.group(1) if match else None
 
-def get_youtube_transcript(video_id):
-    try:
-        transcript = YouTubeTranscriptApi.get_transcript(video_id)
-        formatter = TextFormatter()
-        return formatter.format_transcript(transcript)
-    except Exception as e:
-        logger.error(f"Error fetching transcript: {e}")
-        return None
-
-def summarize_text(text):
-    if not GEMINI_API_KEY:
-        return "Gemini API key is not configured."
-    try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        prompt = f"Please summarize the following text into exactly 3 concise bullet points:\n\n{text}"
-        response = model.generate_content(prompt)
-        # Log to DB
-        try:
-            import requests
-            requests.post('http://localhost:5000/api/logs', json={"event": f"Summarized text of length {len(text)}"})
-        except Exception as log_e:
-            logger.error(f"Failed to log: {log_e}")
-            
-        return response.text
-    except Exception as e:
-        logger.error(f"Error calling Gemini: {e}")
-        return "Failed to generate summary."
-
+# 5. Command Handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello! Send me a YouTube link or a voice note, and I will summarize it into exactly 3 concise bullet points.")
+    # Animation/GIF ki jagah ek mast Welcome message with Buttons
+    welcome_text = (
+        "👋 *Ram Ram Bhai! Welcome to YT Summarizer AI*\n\n"
+        "Main kisi bhi YouTube video ka nichod (summary) nikaal sakta hoon.\n\n"
+        "🚀 *Kaise use karein?*\n"
+        "Bas link bhejo aur magic dekho!"
+    )
+    keyboard = [
+        [InlineKeyboardButton("Help ❓", callback_data='help'),
+         InlineKeyboardButton("About 🤖", callback_data='about')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    # Aap yahan koi bhi direct image link daal sakte ho animation ke liye
+    await update.message.reply_photo(
+        photo="https://img.freepik.com/free-vector/ai-technology-brain-background-digital-transformation-concept_53876-117538.jpg",
+        caption=welcome_text,
+        parse_mode='Markdown',
+        reply_markup=reply_markup
+    )
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    help_text = (
+        "📖 *Help Menu:*\n\n"
+        "1️⃣ /start - Bot shuru karne ke liye.\n"
+        "2️⃣ /help - Ye menu dekhne ke liye.\n"
+        "3️⃣ /status - Check karne ke liye bot sahi chal raha hai ya nahi.\n\n"
+        "💡 *Tip:* Sirf wahi video summary hogi jisme English ya Hindi subtitles honge."
+    )
+    await update.message.reply_text(help_text, parse_mode='Markdown')
+
+async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("✅ *System Status:* Bot Ekdum Mast Chal Raha Hai!", parse_mode='Markdown')
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
-    if not text:
-        return
-
-    video_id = get_youtube_id(text)
+    video_id = get_video_id(text)
+    
     if video_id:
-        await update.message.reply_text("Fetching YouTube transcript...")
-        transcript = get_youtube_transcript(video_id)
-        if transcript:
-            await update.message.reply_text("Summarizing...")
-            summary = summarize_text(transcript)
-            await update.message.reply_text(summary)
-        else:
-            await update.message.reply_text("Could not fetch transcript for this video. It might not have English subtitles.")
+        status_msg = await update.message.reply_text("⏳ *Video mil gayi! Dimag laga raha hoon...*", parse_mode='Markdown')
+        
+        try:
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'hi'])
+            transcript = " ".join([t['text'] for t in transcript_list])
+            
+            await status_msg.edit_text("✍️ *Transcription mil gayi! Ab summary likh raha hoon...*", parse_mode='Markdown')
+            
+            prompt = f"Summarize this YouTube video in 5 catchy bullet points in Hinglish. Make it professional yet easy to understand:\n\n{transcript[:30000]}"
+            response = model.generate_content(prompt)
+            
+            final_summary = f"📊 *VIDEO SUMMARY*\n\n{response.text}\n\n✨ *Generated by your AI Buddy*"
+            await status_msg.edit_text(final_summary, parse_mode='Markdown')
+            
+        except Exception as e:
+            await status_msg.edit_text("❌ *Error:* Is video ke subtitles band hain ya video bahut lambi hai.")
     else:
-        await update.message.reply_text("Please send a valid YouTube link or a voice note.")
+        await update.message.reply_text("⚠️ Bhai, ye YouTube link nahi lag raha. Sahi link bhej!")
 
-async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Downloading voice note...")
-    file = await update.message.voice.get_file()
-    
-    with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as tmp_file:
-        tmp_path = tmp_file.name
-        
-    await file.download_to_drive(tmp_path)
-    
-    await update.message.reply_text("Transcribing...")
-    try:
-        result = whisper_model.transcribe(tmp_path)
-        transcript = result["text"]
-        
-        await update.message.reply_text("Summarizing...")
-        summary = summarize_text(transcript)
-        await update.message.reply_text(summary)
-    except Exception as e:
-        logger.error(f"Error processing voice: {e}")
-        await update.message.reply_text("Failed to process voice note.")
-    finally:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
-
-def main():
-    if not TELEGRAM_TOKEN:
-        logger.error("TELEGRAM_TOKEN is missing!")
-        return
-
-    application = Application.builder().token(TELEGRAM_TOKEN).build()
-
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.add_handler(MessageHandler(filters.VOICE, handle_voice))
-
-    keep_alive()
-    logger.info("Starting bot...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
-
+# 6. Main Execution
 if __name__ == '__main__':
-    main()
+    keep_alive() # Render survival trick
+    app = ApplicationBuilder().token(TOKEN).build()
+    
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("status", status))
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+    
+    print("Bot is running...")
+    app.run_polling()
