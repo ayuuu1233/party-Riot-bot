@@ -1,6 +1,5 @@
 import os
 import re
-import asyncio
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
@@ -15,85 +14,72 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# 3. Gemini Setup
+# 3. Gemini Setup (Using Flash model for long videos)
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('gemini-1.5-flash') # 1.5-flash lambi videos handle karta hai
 
-# 4. Helper Functions
+# 4. Extract Video ID (Works for Reels, Shorts, and Links)
 def get_video_id(url):
-    pattern = r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})'
-    match = re.search(pattern, url)
-    return match.group(1) if match else None
-
-# 5. Command Handlers
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Animation/GIF ki jagah ek mast Welcome message with Buttons
-    welcome_text = (
-        "👋 *Ram Ram Bhai! Welcome to YT Summarizer AI*\n\n"
-        "Main kisi bhi YouTube video ka nichod (summary) nikaal sakta hoon.\n\n"
-        "🚀 *Kaise use karein?*\n"
-        "Bas link bhejo aur magic dekho!"
-    )
-    keyboard = [
-        [InlineKeyboardButton("Help ❓", callback_data='help'),
-         InlineKeyboardButton("About 🤖", callback_data='about')]
+    patterns = [
+        r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', # Normal links
+        r'shorts\/([0-9A-Za-z_-]{11})',     # Shorts links
+        r'youtu\.be\/([0-9A-Za-z_-]{11})'   # Shortened links
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    # Aap yahan koi bhi direct image link daal sakte ho animation ke liye
-    await update.message.reply_photo(
-        photo="https://img.freepik.com/free-vector/ai-technology-brain-background-digital-transformation-concept_53876-117538.jpg",
-        caption=welcome_text,
-        parse_mode='Markdown',
-        reply_markup=reply_markup
-    )
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return None
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = (
-        "📖 *Help Menu:*\n\n"
-        "1️⃣ /start - Bot shuru karne ke liye.\n"
-        "2️⃣ /help - Ye menu dekhne ke liye.\n"
-        "3️⃣ /status - Check karne ke liye bot sahi chal raha hai ya nahi.\n\n"
-        "💡 *Tip:* Sirf wahi video summary hogi jisme English ya Hindi subtitles honge."
-    )
-    await update.message.reply_text(help_text, parse_mode='Markdown')
+# 5. Get Full Transcript (Including Auto-Generated)
+def get_full_transcript(video_id):
+    try:
+        # Isme humne 'hi' (Hindi) aur 'en' (English) dono auto-captions on kar diye hain
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['hi', 'en', 'en-GB'])
+        return " ".join([t['text'] for t in transcript_list])
+    except:
+        try:
+            # Agar primary nahi mila toh auto-generated dhundega
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            transcript = transcript_list.find_generated_transcript(['hi', 'en'])
+            return " ".join([t['text'] for t in transcript.fetch()])
+        except Exception as e:
+            return None
 
-async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("✅ *System Status:* Bot Ekdum Mast Chal Raha Hai!", parse_mode='Markdown')
+# 6. Handlers
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    welcome_text = "🔥 *AI Multi-Summarizer Bot*\n\nMain Shorts, Reels aur Long Videos (Bina Subtitles wali bhi) summarize kar sakta hoon!"
+    await update.message.reply_text(welcome_text, parse_mode='Markdown')
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     video_id = get_video_id(text)
     
     if video_id:
-        status_msg = await update.message.reply_text("⏳ *Video mil gayi! Dimag laga raha hoon...*", parse_mode='Markdown')
+        status_msg = await update.message.reply_text("🔎 *AI Is Analyzing the video...*")
         
-        try:
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'hi'])
-            transcript = " ".join([t['text'] for t in transcript_list])
+        transcript = get_full_transcript(video_id)
+        
+        if transcript:
+            await status_msg.edit_text("✍️ *Nichod nikaal raha hoon...*")
             
-            await status_msg.edit_text("✍️ *Transcription mil gayi! Ab summary likh raha hoon...*", parse_mode='Markdown')
+            # Pura video summarize karne ke liye lamba prompt
+            prompt = (
+                f"Identify all key points from this video transcript. "
+                f"Provide a detailed summary in Hinglish that covers the entire video from start to end. "
+                f"Transcript: {transcript[:50000]}" # 50k characters handle karega
+            )
             
-            prompt = f"Summarize this YouTube video in 5 catchy bullet points in Hinglish. Make it professional yet easy to understand:\n\n{transcript[:30000]}"
             response = model.generate_content(prompt)
-            
-            final_summary = f"📊 *VIDEO SUMMARY*\n\n{response.text}\n\n✨ *Generated by your AI Buddy*"
-            await status_msg.edit_text(final_summary, parse_mode='Markdown')
-            
-        except Exception as e:
-            await status_msg.edit_text("❌ *Error:* Is video ke subtitles band hain ya video bahut lambi hai.")
+            await status_msg.edit_text(f"📝 *DETAILED SUMMARY:*\n\n{response.text}", parse_mode='Markdown')
+        else:
+            await status_msg.edit_text("❌ Is video par Captions/Subtitles disable hain. AI ise read nahi kar paa raha.")
     else:
-        await update.message.reply_text("⚠️ Bhai, ye YouTube link nahi lag raha. Sahi link bhej!")
+        await update.message.reply_text("⚠️ Sahi YouTube, Shorts ya Reel link bhein!")
 
-# 6. Main Execution
 if __name__ == '__main__':
-    keep_alive() # Render survival trick
+    keep_alive()
     app = ApplicationBuilder().token(TOKEN).build()
-    
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("status", status))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-    
-    print("Bot is running...")
     app.run_polling()
