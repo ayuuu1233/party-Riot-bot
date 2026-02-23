@@ -304,15 +304,27 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(status_text, parse_mode='Markdown')
 
-async def feedback_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Feedback handler - prompts user to send feedback"""
-    await update.message.reply_text(
-        "📝 *Feedback Bhej De!*\n\n"
-        "Bas apni feedback likha kar bhej. "
-        "Improvements ke liye appreciate karte hain! 🙏"
-    )
-    # Set a conversation state to handle the next message as feedback
-    return "waiting_for_feedback"
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("❌ Process cancel kar diya gaya. Ab aap link bhej sakte hain.")
+    return ConversationHandler.END
+
+async def handle_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        user_id = update.message.from_user.id
+        feedback = update.message.text
+        logger.info(f"📝 Feedback from {user_id}: {feedback}")
+        await update.message.reply_text("✅ Feedback mil gaya!\n\nShukriya bhai! Apki feedback zaruri hai. 🙏")
+        try:
+            await context.bot.send_message(
+                chat_id=ADMIN_ID,
+                text=f"📝 New Feedback\n\nUser ID: {user_id}\nMessage: {feedback}"
+            )
+        except:
+            pass
+    except Exception as e:
+        logger.error(f"Feedback handler error: {e}")
+    return ConversationHandler.END
+
 
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin command to view detailed stats"""
@@ -512,25 +524,29 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ================== 7. MAIN APPLICATION ==================
 def main():
-    """Start the bot without APScheduler to avoid crash"""
     try:
         logger.info("🚀 Starting AI YouTube Summarizer Bot 2.0...")
         
         app = ApplicationBuilder().token(TOKEN).build()
         
-        # Add handlers 
+        conv_handler = ConversationHandler(
+            entry_points=[CommandHandler('feedback', feedback_command)],
+            states={
+                "waiting_for_feedback": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_feedback)]
+            },
+            fallbacks=[CommandHandler('cancel', cancel)]
+        )
+        
         app.add_handler(CommandHandler("start", start))
+        app.add_handler(CommandHandler("admin_stats", admin_stats))
+        app.add_handler(conv_handler) 
         app.add_handler(CommandHandler("help", help_command))
         app.add_handler(CommandHandler("stats", status_command))
-        app.add_handler(CommandHandler("feedback", feedback_command))
-        app.add_handler(CommandHandler("admin_stats", admin_stats))
         app.add_handler(CallbackQueryHandler(button_callback))
         app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
         
-        # Error handler
         app.add_error_handler(error_handler)
         
-        # --- FIXED BLOCK ---
         try:
             loop = asyncio.get_event_loop()
             loop.create_task(reset_hourly_limits()) 
@@ -538,7 +554,6 @@ def main():
         except Exception as loop_error:
             logger.error(f"Loop error: {loop_error}")
         
-        # Keep alive
         keep_alive()
         
         logger.info("✅ Bot started successfully!")
@@ -547,7 +562,6 @@ def main():
     except Exception as e:
         logger.error(f"Failed to start bot: {e}")
         raise
-
 
 if __name__ == '__main__':
     main()
