@@ -184,21 +184,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        image_url = "https://i.ibb.co/6R0D5fT/gojo-static.jpg"
+        gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
+        
         try:
-            await update.message.reply_photo(
-                photo=image_url,
+            await context.bot.send_animation(
+                chat_id=update.effective_chat.id,
+                animation=gif_url,
                 caption=welcome_text,
                 reply_markup=reply_markup,
                 parse_mode='Markdown'
             )
         except Exception as e:
-            logger.warning(f"Image failed, sending text instead: {e}")
+            logger.warning(f"GIF failed: {e}")
+            
             await update.message.reply_text(
                 welcome_text, 
                 reply_markup=reply_markup, 
                 parse_mode='Markdown'
             )
+
             
     except Exception as e:
         logger.error(f"Start command error: {e}")
