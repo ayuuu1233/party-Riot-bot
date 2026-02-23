@@ -304,27 +304,13 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(status_text, parse_mode='Markdown')
 
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("❌ Process cancel kar diya gaya. Ab aap link bhej sakte hain.")
-    return ConversationHandler.END
 
-async def handle_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        user_id = update.message.from_user.id
-        feedback = update.message.text
-        logger.info(f"📝 Feedback from {user_id}: {feedback}")
-        await update.message.reply_text("✅ Feedback mil gaya!\n\nShukriya bhai! Apki feedback zaruri hai. 🙏")
-        try:
-            await context.bot.send_message(
-                chat_id=ADMIN_ID,
-                text=f"📝 New Feedback\n\nUser ID: {user_id}\nMessage: {feedback}"
-            )
-        except:
-            pass
-    except Exception as e:
-        logger.error(f"Feedback handler error: {e}")
-    return ConversationHandler.END
-
+async def feedback_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "📝 *Feedback Bhej De!*\n\n"
+        "Bas apni feedback likh kar bhej. Improvements ke liye appreciate karte hain! 🙏"
+    )
+    return "waiting_for_feedback"
 
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin command to view detailed stats"""
@@ -481,32 +467,39 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
 
 async def handle_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle feedback messages"""
+    """Ye function feedback ko save karke Admin ko bhejega"""
     try:
         user_id = update.message.from_user.id
         feedback = update.message.text
-        
-        # Log feedback
         logger.info(f"📝 Feedback from {user_id}: {feedback}")
         
-        # Send confirmation to user
         await update.message.reply_text(
-            "✅ *Feedback mil gaya!*\n\n"
-            "Shukriya bhai! Apki feedback zaruri hai. 🙏\n"
-            "Jaldi improve karenge! 💪"
+            "✅ *Feedback mil gaya!*\n\nShukriya bhai! Apki feedback zaruri hai. 🙏",
+            parse_mode='Markdown'
         )
         
-        # Optionally send to admin
         try:
             await context.bot.send_message(
                 chat_id=ADMIN_ID,
-                text=f"📝 *New Feedback*\n\nUser ID: {user_id}\nMessage: {feedback[:500]}"
+                text=f"📝 *New Feedback*\n\nUser ID: {user_id}\nMessage: {feedback[:500]}",
+                parse_mode='Markdown'
             )
         except:
             pass
             
     except Exception as e:
         logger.error(f"Feedback handler error: {e}")
+    
+    
+    return ConversationHandler.END
+
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "❌ *Process cancel kar diya gaya.*\n\nAb aap naya YouTube link bhej sakte hain! 🚀",
+        parse_mode='Markdown'
+    )
+    return ConversationHandler.END
+
 
 # ================== 6. ERROR HANDLER ==================
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
