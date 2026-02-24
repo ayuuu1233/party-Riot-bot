@@ -38,8 +38,14 @@ model = genai.GenerativeModel('gemini-1.5-flash')
 
 # Ye function metadata (Title/Description) nikalne ke liye
 async def get_video_info_fallback(video_url):
+    """Metadata fetcher with better error handling"""
     try:
-        ydl_opts = {'quiet': True, 'no_warnings': True}
+        ydl_opts = {
+            'quiet': True, 
+            'no_warnings': True,
+            'extract_flat': False,
+            'skip_download': True
+        }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
             return {
@@ -47,7 +53,7 @@ async def get_video_info_fallback(video_url):
                 "description": info.get('description', 'No Description')
             }
     except Exception as e:
-        logger.error(f"yt-dlp error: {e}")
+        logger.error(f"yt-dlp absolute failure: {e}")
         return None
 
 
@@ -226,11 +232,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Error aaya! Support se contact kar.")
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle inline button clicks"""
+    """Handle inline button clicks - Fixed for GIF compatibility"""
     query = update.callback_query
     await query.answer()
     
     try:
+        # Note: 'edit_message_text' works only on text messages. 
+        # Since we send a GIF, we must use 'reply_text' to avoid errors.
+        
         if query.data == 'help':
             help_text = (
                 "📖 *Help Menu:*\n\n"
@@ -243,13 +252,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "• youtu.be/...\n"
                 "• youtube.com/shorts/...\n\n"
                 "⚠️ *Zaruri Baatein:*\n"
-                "• Video ke captions hone zaruri hain\n"
+                "• Hum AI se summary nikalte hain\n"
                 "• 5 second cooldown hai\n"
                 "• 50 requests per hour limit\n\n"
                 "❓ Problem ho raha hai?\n"
                 "/support command use kar!"
             )
-            await query.edit_message_text(help_text, parse_mode='Markdown')
+            await query.message.reply_text(help_text, parse_mode='Markdown')
             
         elif query.data == 'status':
             status_text = (
@@ -260,7 +269,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "👥 *Users:* Active\n\n"
                 "Bot mast chal raha hai bhai! 🔥"
             )
-            await query.edit_message_text(status_text, parse_mode='Markdown')
+            await query.message.reply_text(status_text, parse_mode='Markdown')
             
         elif query.data == 'mystats':
             user_id = query.from_user.id
@@ -277,26 +286,27 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 stats_text = "📊 *No stats yet!*\nSend a YouTube link to get started!"
             
-            await query.edit_message_text(stats_text, parse_mode='Markdown')
+            await query.message.reply_text(stats_text, parse_mode='Markdown')
             
         elif query.data == 'support':
             support_text = (
                 "🆘 *Support Information:*\n\n"
-                "❌ Captions disabled?\n"
-                "→ Video owner ne captions off kiye hain\n"
+                "❌ Video fail ho raha hai?\n"
+                "→ Private videos ki summary nahi nikal sakti\n"
                 "→ Dusra video try kar!\n\n"
                 "⚠️ Rate limit exceed?\n"
                 "→ 1 ghante baad try kar\n\n"
                 "🐛 Bug mil gaya?\n"
                 "→ /feedback command use kar\n\n"
                 "📞 Direct Contact:\n"
-                "→ @ayuuu1233 (Creator)"
+                "→ @Ayushboy1 (Creator)"
             )
-            await query.edit_message_text(support_text, parse_mode='Markdown')
+            await query.message.reply_text(support_text, parse_mode='Markdown')
             
     except Exception as e:
         logger.error(f"Button callback error: {e}")
-        await query.edit_message_text("❌ Error! Try again.")
+        await query.message.reply_text("❌ Error! Ek baar phir try kar bhai.")
+
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Help command"""
@@ -398,14 +408,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Fetch transcript
         transcript = get_full_transcript(video_id)
         
-        video_info = None
         if not transcript:
             # AGAR TRANSCRIPT NAHI MILI, TOH METADATA NIKALO
-            await status_msg.edit_text("🔄 Subtitles disable hain, par fikar mat kar! AI metadata se summary nikaal raha hoon...")
+            await update.message.reply_text("🔄 Subtitles nahi mile, AI metadata se summary nikaal raha hoon...")
+            
             video_info = await get_video_info_fallback(text)
             
             if not video_info:
-                await status_msg.edit_text("❌ Is video ki koi info nahi mil rahi (No Captions & No Metadata).")
+                await update.message.reply_text("❌ Is video ki koi info nahi mil rahi (No Captions & No Metadata).")
                 update_stats("errors")
                 return
             
@@ -417,16 +427,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Description: {video_info['description']}"
             )
         else:
-            # 2. Agar transcript mil gayi, toh lambi video ka warning do
-            transcript_length = len(transcript)
-            if transcript_length > 100000:
-                await status_msg.edit_text("⚠️ *Video Bahut Lambi Hai!*\n🤔 Summary likh raha hoon... 2-3 minute wait kar! ⏱️")
-            elif transcript_length > 50000:
-                await status_msg.edit_text("📊 *Big Video Detected!*\nSummary likh raha hoon... thoda wait kar 🕐")
-            else:
-                await status_msg.edit_text("✍️ *Detailed summary likh raha hoon...*\nBas ek minute! ⏳")
-
-            # AI Prompt for Transcript
+            # 2. Agar transcript mil gayi, toh normal prompt banao
+            await update.message.reply_text("✍️ *Detailed summary likh raha hoon...* Bas ek minute! ⏳")
+            
             prompt = (
                 f"Mujhe iss YouTube video ke liye VERY DETAILED SUMMARY Hinglish mein chahiye. "
                 f"Sab important points cover kar. Heading ke sath acha structure bana. "
@@ -436,7 +439,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 3. Final Summary Generate Karo
         response = model.generate_content(prompt)
         summary = response.text
-        
+
         # --- REPLACE END ---
 
         
