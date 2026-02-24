@@ -1,5 +1,6 @@
-python-telegram-bot
+python-telegram-bot[job-queue]
 youtube-transcript-api
 google-generativeai
 flask
 yt-dlp>=2024.12.06
+werkzeug
