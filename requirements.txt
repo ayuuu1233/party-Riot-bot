@@ -2,4 +2,4 @@ python-telegram-bot
 youtube-transcript-api
 google-generativeai
 flask
-yt-dlp
+yt-dlp>=2024.12.06
