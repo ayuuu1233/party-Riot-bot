@@ -11,6 +11,7 @@ from telegram.ext import (
 )
 from youtube_transcript_api import YouTubeTranscriptApi
 import google.generativeai as genai
+import yt_dlp
 from keep_alive import keep_alive
 
 # ================== 1. SETUP & CONFIG ==================
@@ -33,6 +34,22 @@ ADMIN_ID = int(ADMIN_ID_STR)
 # Gemini Setup
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
+
+
+# Ye function metadata (Title/Description) nikalne ke liye
+async def get_video_info_fallback(video_url):
+    try:
+        ydl_opts = {'quiet': True, 'no_warnings': True}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(video_url, download=False)
+            return {
+                "title": info.get('title', 'No Title'),
+                "description": info.get('description', 'No Description')
+            }
+    except Exception as e:
+        logger.error(f"yt-dlp error: {e}")
+        return None
+
 
 # ================== 2. DATA MANAGEMENT ==================
 # User tracking
@@ -381,47 +398,47 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Fetch transcript
         transcript = get_full_transcript(video_id)
         
+        video_info = None
         if not transcript:
-            await status_msg.edit_text(
-                "❌ *Error:* Is video ke subtitles/captions disable hain.\n\n"
-                "😓 Dusra video try kar bhai! "
-                "(Video ke liye captions zaruri hain)"
-            )
-            update_stats("errors")
-            return
-        
-        # Warn for long transcripts
-        transcript_length = len(transcript)
-        if transcript_length > 100000:
-            await status_msg.edit_text(
-                "⚠️ *Video Bahut Lambi Hai!*\n"
-                f"({transcript_length} characters)\n\n"
-                "🤔 Summary likh raha hoon... 2-3 minute wait kar! ⏱️"
-            )
-        elif transcript_length > 50000:
-            await status_msg.edit_text(
-                "📊 *Big Video Detected!*\n"
-                "Summary likh raha hoon... thoda wait kar 🕐"
+            # AGAR TRANSCRIPT NAHI MILI, TOH METADATA NIKALO
+            await status_msg.edit_text("🔄 Subtitles disable hain, par fikar mat kar! AI metadata se summary nikaal raha hoon...")
+            video_info = await get_video_info_fallback(text)
+            
+            if not video_info:
+                await status_msg.edit_text("❌ Is video ki koi info nahi mil rahi (No Captions & No Metadata).")
+                update_stats("errors")
+                return
+            
+            # AI Prompt for Metadata
+            prompt = (
+                f"Mujhe iss YouTube video ki VERY DETAILED SUMMARY Hinglish mein chahiye. "
+                f"Video mein subtitles nahi hain, isliye Title aur Description use karo:\n\n"
+                f"Title: {video_info['title']}\n"
+                f"Description: {video_info['description']}"
             )
         else:
-            await status_msg.edit_text(
-                "✍️ *Detailed summary likh raha hoon...*\n"
-                "Bas ek minute! ⏳"
+            # 2. Agar transcript mil gayi, toh lambi video ka warning do
+            transcript_length = len(transcript)
+            if transcript_length > 100000:
+                await status_msg.edit_text("⚠️ *Video Bahut Lambi Hai!*\n🤔 Summary likh raha hoon... 2-3 minute wait kar! ⏱️")
+            elif transcript_length > 50000:
+                await status_msg.edit_text("📊 *Big Video Detected!*\nSummary likh raha hoon... thoda wait kar 🕐")
+            else:
+                await status_msg.edit_text("✍️ *Detailed summary likh raha hoon...*\nBas ek minute! ⏳")
+
+            # AI Prompt for Transcript
+            prompt = (
+                f"Mujhe iss YouTube video ke liye VERY DETAILED SUMMARY Hinglish mein chahiye. "
+                f"Sab important points cover kar. Heading ke sath acha structure bana. "
+                f"Video transcript:\n\n{transcript[:100000]}"
             )
-        
-        # Generate summary with smart truncation
-        max_transcript_length = 100000
-        truncated_transcript = transcript[:max_transcript_length]
-        
-        prompt = (
-            f"Mujhe iss YouTube video ke liye VERY DETAILED SUMMARY "
-            f"Hinglish mein chahiye. Sab important points cover kar. "
-            f"Heading ke sath acha structure bana. "
-            f"Video transcript:\n\n{truncated_transcript}"
-        )
-        
+
+        # 3. Final Summary Generate Karo
         response = model.generate_content(prompt)
         summary = response.text
+        
+        # --- REPLACE END ---
+
         
         # Split long summaries
         if len(summary) > 4096:
