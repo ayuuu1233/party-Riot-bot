@@ -2,6 +2,7 @@ import os
 import re
 import logging
 import json
+import asyncio
 from datetime import datetime, timedelta
 from collections import defaultdict
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -439,6 +440,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 3. Final Summary Generate Karo
         response = model.generate_content(prompt)
         summary = response.text
+
+                # Update stats
+        update_stats("total_summaries")
+        
+        # Transcript length calculate karo history ke liye
+        t_len = len(transcript) if transcript else 0
+        
+        # Add to user history
+        user_history[user_id].append({
+            "video_id": video_id,
+            "timestamp": datetime.now().isoformat(),
+            "transcript_length": t_len  # <--- Yahan error aa sakta tha, ab fixed hai
+        })
+
 
         # --- REPLACE END ---
 
