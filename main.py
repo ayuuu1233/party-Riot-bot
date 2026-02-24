@@ -590,7 +590,7 @@ def main():
     try:
         logger.info("🚀 Booting AI YouTube Summarizer (Professional Mode)...")
 
-        keep_alive()  # Run first (Render safe)
+        keep_alive()
 
         app = (
             ApplicationBuilder()
@@ -599,7 +599,6 @@ def main():
             .build()
         )
 
-        # ================= HANDLERS =================
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler('feedback', feedback_command)],
             states={
@@ -623,19 +622,22 @@ def main():
 
         app.add_error_handler(error_handler)
 
-        # ================= BACKGROUND JOB =================
-        app.job_queue.run_repeating(
-            lambda ctx: reset_hourly_limits(),
-            interval=3600,
-            first=3600
-        )
+        if app.job_queue:
+            app.job_queue.run_repeating(
+                lambda ctx: reset_hourly_limits(),
+                interval=3600,
+                first=3600
+            )
+            logger.info("⏰ Background Job Queue started.")
+        else:
+            logger.warning("⚠️ JobQueue missing! Reset job not started.")
 
         logger.info("✅ All systems initialized successfully.")
+        
         app.run_polling(drop_pending_updates=True)
 
     except Exception as e:
         logger.critical(f"❌ Fatal Startup Error: {e}")
-        raise
 
 if __name__ == '__main__':
     main()
