@@ -166,12 +166,15 @@ def reset_hourly_limits():
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Start command with professional video-bot style and original buttons"""
+    """Ultra-Professional Start with Anime Style & Clean Logic"""
     try:
         user_id = update.message.from_user.id
         user_name = update.message.from_user.first_name
         
-        # Track user logic
+        # Action: Typing... (Professional touch)
+        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="upload_photo")
+        
+        # User Tracking (Conflict-free logic)
         if user_id not in user_data:
             user_data[user_id] = {
                 "first_name": user_name,
@@ -182,39 +185,38 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         bot_obj = await context.bot.get_me()
         bot_username = bot_obj.username
-        share_url = f"https://t.me/share/url?url=t.me/{bot_username}&text=Bhai, ye AI bot YouTube video ki puri summary nikaal deta hai! Try kar. 🔥"
+        share_url = f"https://t.me/share/url?url=t.me/{bot_username}&text=Bhai, ye AI bot YouTube summary nikaal deta hai! 🔥"
         
-        # New Professional Welcome Text with Dividers and Style
+        # ─── PROFESSIONAL FORMATTING & FONTS ───
+        # Note: Unicode fonts looks premium on all devices
         welcome_text = (
-            f"✨ *Namaste {user_name}!* ✨\n\n"
-            "🎬 *AI YouTube Summarizer Bot* mein aapka swagat hai.\n"
-            "Main aapke lambe videos aur shorts ko seconds mein summarize kar sakta hoon! 🚀\n\n"
+            f"⚡ 𝖶𝖾𝗅𝖼𝗈𝗆𝖾, {user_name}! ⚡\n\n"
+            "✨ *『 𝖠𝖨 𝖸𝖮𝖴𝖳𝖴𝖡𝖤 𝖲𝖴𝖬𝖬𝖠𝖱𝖨𝖹𝖤𝖱 』*\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "🌟 *Bot Features:*\n"
-            "🔹 *Detailed Summaries:* Hinglish mein poori jaankari.\n"
-            "🔹 *Smart Analysis:* Captions aur metadata ka upyog.\n"
-            "🔹 *Super Fast:* Bina ruke results.\n\n"
-            "📌 *Kaise Use Karein:*\n"
-            "Bas kisi bhi YouTube video ka link yahan paste karein! ⬇️\n"
-            "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            "⏱️ *Limits:* 50 requests per hour | 5s cooldown"
+            "🎬 *ꜱʏꜱᴛᴇᴍ ᴄᴀᴘᴀʙɪʟɪᴛɪᴇꜱ:*\n"
+            "┠ 🔹 *ꜰᴀꜱᴛ ꜱᴜᴍᴍᴀʀʏ:* Seconds mein results\n"
+            "┠ 🔹 *ʜɪɴɢʟɪꜱʜ ꜱᴜᴘᴘᴏʀᴛ:* Easy to understand\n"
+            "┠ 🔹 *ꜱᴍᴀʀᴛ ᴀɪ:* No captions? No problem!\n\n"
+            "🚀 *ʜᴏᴡ ᴛᴏ ᴜꜱᴇ:*\n"
+            "➠ Bas YouTube link copy-paste karo!\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "📊 *ꜱᴛᴀᴛᴜꜱ:* `System Online` 🟢\n"
+            "⏱️ *ʟɪᴍɪᴛꜱ:* `50 req/hr` | `5s cooldown`"
         )
         
-        # Original Buttons kept as requested
+        # Premium Buttons
         keyboard = [
-            [InlineKeyboardButton("Help ❓", callback_data='help'), 
-             InlineKeyboardButton("Status ✅", callback_data='status')],
-            [InlineKeyboardButton("My Stats 📊", callback_data='mystats'),
-             InlineKeyboardButton("Support 🆘", callback_data='support')],
-            [InlineKeyboardButton("Share with Friends 📢", url=share_url)]
+            [InlineKeyboardButton("📖 𝖧𝖾𝗅𝗉 𝖬𝖾𝗇𝗎", callback_data='help'), 
+             InlineKeyboardButton("📈 𝖲𝗍𝖺𝗍𝗎𝗌", callback_data='status')],
+            [InlineKeyboardButton("👤 𝖬𝗒 𝖲𝗍𝖺𝗍𝗌", callback_data='mystats'),
+             InlineKeyboardButton("🆘 𝖲𝗎𝗉𝗉𝗈𝗋𝗍", callback_data='support')],
+            [InlineKeyboardButton("📢 𝖲𝗁𝖺𝗋𝖾 𝗐𝗂𝗍𝗁 𝖥𝗋𝗂𝖾𝗇𝖽𝗌", url=share_url)]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        # Animation URL
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
         
         try:
-            # Send animation with new style and original buttons
             await context.bot.send_animation(
                 chat_id=update.effective_chat.id,
                 animation=gif_url,
@@ -222,9 +224,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=reply_markup,
                 parse_mode='Markdown'
             )
-        except Exception as e:
-            logger.warning(f"GIF failed: {e}")
-            # Fallback text message
+        except Exception:
+            # Fallback text if GIF fails
             await update.message.reply_text(
                 welcome_text, 
                 reply_markup=reply_markup, 
@@ -232,8 +233,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             
     except Exception as e:
-        logger.error(f"Start command error: {e}")
-        await update.message.reply_text("❌ Error aaya! Support se contact kar.")
+        logger.error(f"Start error: {e}")
+        # Conflict hone par silent fail ya chota msg
+        pass 
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle inline button clicks - Fixed for GIF compatibility"""
