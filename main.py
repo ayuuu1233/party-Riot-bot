@@ -97,6 +97,7 @@ def update_stats(stat_name, value=1):
     stats[stat_name] = stats.get(stat_name, 0) + value
     save_stats(stats)
 
+    
 # ================== 3. UTILITY FUNCTIONS ==================
 def get_video_id(url):
     """Extract YouTube video ID from various URL formats"""
@@ -366,103 +367,7 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(admin_text, parse_mode='Markdown')
 
 # ================== 5. MESSAGE HANDLER ==================
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Main message handler for YouTube links"""
-    try:
-        user_id = update.message.from_user.id
-        text = update.message.text.strip()
-        
-        # Check rate limit
-        is_allowed, message = check_rate_limit(user_id)
-        if not is_allowed:
-            await update.message.reply_text(f"{message}")
-            return
-        
-        # Extract video ID
-        video_id = get_video_id(text)
-        if not video_id:
-            await update.message.reply_text(
-                "⚠️ *Invalid Link!* 🤔\n\n"
-                "Sahi YouTube link bhej bhai!\n"
-                "Examples:\n"
-                "• youtube.com/watch?v=...\n"
-                "• youtu.be/...\n"
-                "• youtube.com/shorts/...",
-                parse_mode='Markdown'
-            )
-            return
-        
-        # Update cooldown and request count
-        user_cooldown[user_id] = datetime.now()
-        request_counts[user_id] += 1
-        
-        # Update user data
-        if user_id in user_data:
-            user_data[user_id]['total_requests'] += 1
-        
-        # Show analyzing status
-        status_msg = await update.message.reply_text(
-            "🔎 *AI Analysing Video...*\n"
-            "Thoda wait kar bhai! 🤖"
-        )
-        
-        # Fetch transcript
-        transcript = get_full_transcript(video_id)
-        
-        if not transcript:
-            # AGAR TRANSCRIPT NAHI MILI, TOH METADATA NIKALO
-            await update.message.reply_text("🔄 Subtitles nahi mile, AI metadata se summary nikaal raha hoon...")
-            
-            video_info = await get_video_info_fallback(text)
-            
-            if not video_info:
-                await update.message.reply_text("❌ Is video ki koi info nahi mil rahi (No Captions & No Metadata).")
-                update_stats("errors")
-                return
-            
-            # AI Prompt for Metadata
-            prompt = (
-                f"Mujhe iss YouTube video ki VERY DETAILED SUMMARY Hinglish mein chahiye. "
-                f"Video mein subtitles nahi hain, isliye Title aur Description use karo:\n\n"
-                f"Title: {video_info['title']}\n"
-                f"Description: {video_info['description']}"
-            )
-        else:
-            # 2. Agar transcript mil gayi, toh normal prompt banao
-            await update.message.reply_text("✍️ *Detailed summary likh raha hoon...* Bas ek minute! ⏳")
-            
-            prompt = (
-                f"Mujhe iss YouTube video ke liye VERY DETAILED SUMMARY Hinglish mein chahiye. "
-                f"Sab important points cover kar. Heading ke sath acha structure bana. "
-                f"Video transcript:\n\n{transcript[:100000]}"
-            )
 
-        # 3. Final Summary Generate Karo
-        response = model.generate_content(prompt)
-        summary = response.text
-
-        # --- REPLACE END ---
-
-        
-        # Split long summaries
-        if len(summary) > 4096:
-            # Telegram message limit is 4096 characters
-            parts = [summary[i:i+4000] for i in range(0, len(summary), 4000)]
-            
-            for idx, part in enumerate(parts, 1):
-                if idx == 1:
-                    await status_msg.edit_text(
-                        f"📝 *SUMMARY (Part {idx}/{len(parts)}):*\n\n{part}",
-                        parse_mode='Markdown'
-                    )
-                else:
-                    await update.message.reply_text(
-                        f"📝 *SUMMARY (Part {idx}/{len(parts)}):*\n\n{part}",
-                        parse_mode='Markdown'
-                    )
-        else:
-            await status_msg.edit_text(
-                f"📝 *SUMMARY:*\n\n{summary}\n\n"
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Main message handler for YouTube links"""
     try:
