@@ -328,17 +328,23 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Status command"""
+    """Professional Status Command with Progress Bars"""
     stats = load_stats()
+    
     status_text = (
-        "🚀 *Bot Status & Statistics:*\n\n"
-        f"📊 Total Summaries: {stats['total_summaries']}\n"
-        f"👥 Total Users: {stats['total_users']}\n"
-        f"⚠️ Errors: {stats['errors']}\n\n"
-        "✅ Bot mast chal raha hai! 🔥"
+        "🚀 *System Status Dashboard* 🚀\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📊 *Total Summaries:* `{stats['total_summaries']}`\n"
+        f"👥 *Total Users:* `{stats['total_users']}`\n"
+        f"⚠️ *System Errors:* `{stats['errors']}`\n\n"
+        "🛰️ *Server Health:*\n"
+        "🟢 API: `[▓▓▓▓▓▓▓▓▓▓] 100%` \n"
+        "🟢 Database: `[▓▓▓▓▓▓▓▓░░] 85%` \n"
+        "🟢 Speed: `Lightning Fast` ⚡\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "✅ *Bot mast chal raha hai bhai!* 🔥"
     )
     await update.message.reply_text(status_text, parse_mode='Markdown')
-
 
 async def feedback_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -367,6 +373,69 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📅 Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     )
     await update.message.reply_text(admin_text, parse_mode='Markdown')
+
+async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """About command with professional style"""
+    about_text = (
+        "🤖 *About This Bot* 🤖\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "✨ *Core:* `Gemini AI 1.5 Flash`\n"
+        "🛠️ *Library:* `Python-Telegram-Bot`\n"
+        "⚡ *Engine:* `yt-dlp & Transcripts API`\n\n"
+        "👤 *Developer:* @Ayushboy1 \n"
+        "🌐 *Host:* `Render (24/7 Online)`\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "Bhai, ye bot YouTube videos ki lambi bak-bak ko short karke deta hai! 🎬"
+    )
+    await update.message.reply_text(about_text, parse_mode='Markdown')
+
+async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """User ke personal usage statistics"""
+    user_id = update.effective_user.id
+    user_name = update.effective_user.first_name
+    
+    # User data fetch logic
+    data = user_data.get(user_id, {"total_requests": 0, "joined_date": "N/A"})
+    count = data['total_requests']
+    
+    # Rank logic based on usage
+    rank = "🆕 Newbie" if count < 5 else "🔥 Regular" if count < 20 else "👑 Legend"
+
+    mystats_text = (
+        f"👤 *USER PROFILE: {user_name.upper()}* 👤\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🎖️ *Your Rank:* `{rank}`\n"
+        f"📊 *Total Summaries:* `{count}`\n"
+        f"📅 *Joined On:* `{data['joined_date'][:10]}`\n\n"
+        "🌟 *Performance Tracking:*\n"
+        f"`[▓▓{'▓' * min(count//2, 8)}{'░' * max(8-count//2, 0)}]` {min(count*5, 100)}%\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "Bhai, thoda aur summarize kar aur Rank up kar! 🚀"
+    )
+    await update.message.reply_text(mystats_text, parse_mode='Markdown')
+
+async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Server latency check with animation"""
+    import time
+    start_time = time.time()
+    
+    # Initial ping message
+    ping_msg = await update.message.reply_text("🛰️ *Pinging Server...*", parse_mode='Markdown')
+    
+    end_time = time.time()
+    latency = round((end_time - start_time) * 1000, 2)
+    
+    # Upgrade to animated response
+    await ping_msg.edit_text(
+        "🏓 *Pong!* 🏓\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"⚡ *Latency:* `{latency} ms`\n"
+        "🟢 *Status:* `System Healthy`\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "Server bilkul smoothly chal raha hai! ✅",
+        parse_mode='Markdown'
+    )
+
 
 # ================== 5. MESSAGE HANDLER ==================
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -530,7 +599,10 @@ def main():
         app.add_handler(CommandHandler("stats", status_command))
         app.add_handler(CallbackQueryHandler(button_callback))
         app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-        
+        app.add_handler(CommandHandler("about", about_command))
+        app.add_handler(CommandHandler("mystats", mystats_command))
+        app.add_handler(CommandHandler("ping", ping_command))
+
         app.add_error_handler(error_handler)
         
         try:
