@@ -166,12 +166,12 @@ def reset_hourly_limits():
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Start command with welcome message"""
+    """Start command with professional video-bot style and original buttons"""
     try:
         user_id = update.message.from_user.id
         user_name = update.message.from_user.first_name
         
-        # Track user
+        # Track user logic
         if user_id not in user_data:
             user_data[user_id] = {
                 "first_name": user_name,
@@ -184,22 +184,23 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot_username = bot_obj.username
         share_url = f"https://t.me/share/url?url=t.me/{bot_username}&text=Bhai, ye AI bot YouTube video ki puri summary nikaal deta hai! Try kar. 🔥"
         
+        # New Professional Welcome Text with Dividers and Style
         welcome_text = (
-            "👋 *Ram Ram Bhai! Welcome to AI YouTube Summarizer* 🎬\n\n"
-            f"Shukriya {user_name}! Main kisi bhi YouTube video, Shorts ya Reel ka poora summary nikaal sakta hoon.\n\n"
-            "🚀 *Features:*\n"
-            "✅ Detailed Summary in Hinglish\n"
-            "✅ Support for Long Videos & Shorts\n"
-            "✅ Auto-generated & Manual Captions\n"
-            "✅ Smart Rate Limiting\n"
-            "✅ Error Recovery\n\n"
-            "📌 *Kaise Use Karu:*\n"
-            "1️⃣ YouTube link bhejo\n"
-            "2️⃣ Bot summary likhega\n"
-            "3️⃣ Apni gaand par baith aur enjoy kar!\n\n"
-            "⏱️ *Limits:* 50 requests per hour, 5 second cooldown"
+            f"✨ *Namaste {user_name}!* ✨\n\n"
+            "🎬 *AI YouTube Summarizer Bot 2.0* mein aapka swagat hai.\n"
+            "Main aapke lambe videos aur shorts ko seconds mein summarize kar sakta hoon! 🚀\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🌟 *Bot Features:*\n"
+            "🔹 *Detailed Summaries:* Hinglish mein poori jaankari.\n"
+            "🔹 *Smart Analysis:* Captions aur metadata ka upyog.\n"
+            "🔹 *Super Fast:* Bina ruke results.\n\n"
+            "📌 *Kaise Use Karein:*\n"
+            "Bas kisi bhi YouTube video ka link yahan paste karein! ⬇️\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "⏱️ *Limits:* 50 requests per hour | 5s cooldown"
         )
         
+        # Original Buttons kept as requested
         keyboard = [
             [InlineKeyboardButton("Help ❓", callback_data='help'), 
              InlineKeyboardButton("Status ✅", callback_data='status')],
@@ -209,9 +210,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
+        # Animation URL
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
         
         try:
+            # Send animation with new style and original buttons
             await context.bot.send_animation(
                 chat_id=update.effective_chat.id,
                 animation=gif_url,
@@ -221,13 +224,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         except Exception as e:
             logger.warning(f"GIF failed: {e}")
-            
+            # Fallback text message
             await update.message.reply_text(
                 welcome_text, 
                 reply_markup=reply_markup, 
                 parse_mode='Markdown'
             )
-
             
     except Exception as e:
         logger.error(f"Start command error: {e}")
