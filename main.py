@@ -370,7 +370,7 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👥 Total Active Users: {stats['total_users']}\n"
         f"⚠️ Total Errors: {stats['errors']}\n"
         f"👤 Unique Users Tracked: {len(user_data)}\n"
-        f"��� Active Sessions: {len([u for u in request_counts if request_counts[u] > 0])}\n"
+        f"🎐 Active Sessions: {len([u for u in request_counts if request_counts[u] > 0])}\n"
         f"⏰ Last Reset: {last_reset_time.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
         f"📅 Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     )
@@ -457,7 +457,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not video_id:
             await update.message.reply_text(
                 "⚠️ *Invalid Link!* 🤔\n\nSahi YouTube link bhej bhai!",
-                parse_mode='Markdown'
+                parse_mode='MarkdownV2'
             )
             return
         
@@ -490,7 +490,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # 5. Generate Summary
         response = model.generate_content(prompt)
-        summary = response.text
+        summary = response.text if response and response.text else "❌ Summary generate nahi ho payi."
         
         await status_msg.edit_text("✍️ *Finalizing Detailed Summary...*\n`[▓▓▓▓▓▓▓▓▓▓] 100%`", parse_mode='Markdown')
         await asyncio.sleep(0.5)
@@ -590,7 +590,7 @@ def main():
     try:
         logger.info("🚀 Starting AI YouTube Summarizer Bot 2.0...")
         
-        app = ApplicationBuilder().token(TOKEN).build()
+        app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
         
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler('feedback', feedback_command)],
