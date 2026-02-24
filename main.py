@@ -584,6 +584,7 @@ async def post_init(application):
     """Conflict error khatam karne ke liye purane updates drop karega"""
     await application.bot.delete_webhook(drop_pending_updates=True)
     logger.info("🧹 All pending updates dropped. Conflict cleared!")
+
 def main():
     try:
         logger.info("🚀 Starting AI YouTube Summarizer Bot 2.0...")
