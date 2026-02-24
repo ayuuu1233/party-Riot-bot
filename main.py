@@ -441,20 +441,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response = model.generate_content(prompt)
         summary = response.text
 
-                # Update stats
-        update_stats("total_summaries")
-        
-        # Transcript length calculate karo history ke liye
-        t_len = len(transcript) if transcript else 0
-        
-        # Add to user history
-        user_history[user_id].append({
-            "video_id": video_id,
-            "timestamp": datetime.now().isoformat(),
-            "transcript_length": t_len  # <--- Yahan error aa sakta tha, ab fixed hai
-        })
-
-
         # --- REPLACE END ---
 
         
@@ -477,31 +463,86 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await status_msg.edit_text(
                 f"📝 *SUMMARY:*\n\n{summary}\n\n"
-                f"📢 *Apne doston ko bhi bhej!* 🎉",
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Main message handler for YouTube links"""
+    try:
+        user_id = update.message.from_user.id
+        text = update.message.text.strip()
+        
+        # Check rate limit
+        is_allowed, message = check_rate_limit(user_id)
+        if not is_allowed:
+            await update.message.reply_text(f"{message}")
+            return
+        
+        # Extract video ID
+        video_id = get_video_id(text)
+        if not video_id:
+            await update.message.reply_text(
+                "⚠️ *Invalid Link!* 🤔\n\nSahi YouTube link bhej bhai!",
                 parse_mode='Markdown'
             )
+            return
         
+        # Update cooldown and request count
+        user_cooldown[user_id] = datetime.now()
+        request_counts[user_id] += 1
+        if user_id in user_data:
+            user_data[user_id]['total_requests'] += 1
+        
+        status_msg = await update.message.reply_text("🔎 *AI Analysing Video...* Thoda wait kar bhai! 🤖")
+        
+        # Fetch transcript
+        transcript = get_full_transcript(video_id)
+        
+        if not transcript:
+            await update.message.reply_text("🔄 Subtitles nahi mile, AI metadata se summary nikaal raha hoon...")
+            video_info = await get_video_info_fallback(text)
+            
+            if not video_info:
+                await update.message.reply_text("❌ Is video ki koi info nahi mil rahi (No Captions & No Metadata).")
+                update_stats("errors")
+                return
+            
+            prompt = f"Mujhe iss YouTube video ki VERY DETAILED SUMMARY Hinglish mein chahiye. Title: {video_info['title']}\nDescription: {video_info['description']}"
+        else:
+            await update.message.reply_text("✍️ *Detailed summary likh raha hoon...* Bas ek minute! ⏳")
+            prompt = f"Mujhe iss YouTube video ke liye VERY DETAILED SUMMARY Hinglish mein chahiye. Video transcript:\n\n{transcript[:100000]}"
+
+        # 3. Final Summary Generate Karo
+        response = model.generate_content(prompt)
+        summary = response.text
+
         # Update stats
         update_stats("total_summaries")
         
-        # Add to user history
+        # Add to user history (Using correct variable name)
+        current_t_len = len(transcript) if transcript else 0
         user_history[user_id].append({
             "video_id": video_id,
             "timestamp": datetime.now().isoformat(),
-            "transcript_length": transcript_length
+            "transcript_length": current_t_len
         })
+
+        # Split long summaries and send
+        if len(summary) > 4000:
+            parts = [summary[i:i+4000] for i in range(0, len(summary), 4000)]
+            for part in parts:
+                await update.message.reply_text(f"📝 {part}", parse_mode='Markdown')
+        else:
+            # Agar summary choti hai toh status message ko edit kar sakte hain
+            try:
+                await status_msg.edit_text(f"📝 *SUMMARY:*\n\n{summary}\n\n📢 *Apne doston ko bhi bhej!* 🎉", parse_mode='Markdown')
+            except:
+                await update.message.reply_text(f"📝 *SUMMARY:*\n\n{summary}", parse_mode='Markdown')
         
         logger.info(f"User {user_id} - Summary generated for {video_id}")
         
     except Exception as e:
         logger.error(f"Handle message error: {e}")
         update_stats("errors")
-        try:
-            await update.message.reply_text(
-                f"❌ *Error Aaya!* 🤦\n\n"
-                f"Technical Issue: {str(e)[:100]}\n\n"
-                f"Retry kar bhai! 🔄"
-            )
+        await update.message.reply_text(f"❌ *Error Aaya!* Retry kar bhai! 🔄")
+
         except:
             pass
 
