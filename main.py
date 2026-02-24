@@ -580,6 +580,10 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
 # ================== 7. MAIN APPLICATION ==================
+async def post_init(application):
+    """Conflict error khatam karne ke liye purane updates drop karega"""
+    await application.bot.delete_webhook(drop_pending_updates=True)
+    logger.info("🧹 All pending updates dropped. Conflict cleared!")
 def main():
     try:
         logger.info("🚀 Starting AI YouTube Summarizer Bot 2.0...")
@@ -607,7 +611,6 @@ def main():
 
         app.add_error_handler(error_handler)
         
-        drop_pending_updates
         app.run_polling(drop_pending_updates=True)
 
         
