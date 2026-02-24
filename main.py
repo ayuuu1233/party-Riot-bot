@@ -626,7 +626,7 @@ def main():
         keep_alive()
         
         logger.info("✅ Bot started successfully!")
-        app.run_polling()
+        
         
     except Exception as e:
         logger.error(f"Failed to start bot: {e}")
