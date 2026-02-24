@@ -367,7 +367,6 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(admin_text, parse_mode='Markdown')
 
 # ================== 5. MESSAGE HANDLER ==================
-
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Main message handler for YouTube links"""
     try:
@@ -405,7 +404,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             video_info = await get_video_info_fallback(text)
             
             if not video_info:
-                await update.message.reply_text("❌ Is video ki koi info nahi mil rahi (No Captions & No Metadata).")
+                await update.message.reply_text("❌ Is video ki info nahi mil rahi (No Captions & No Metadata).")
                 update_stats("errors")
                 return
             
@@ -414,14 +413,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("✍️ *Detailed summary likh raha hoon...* Bas ek minute! ⏳")
             prompt = f"Mujhe iss YouTube video ke liye VERY DETAILED SUMMARY Hinglish mein chahiye. Video transcript:\n\n{transcript[:100000]}"
 
-        # 3. Final Summary Generate Karo
+        # Final Summary Generate Karo
         response = model.generate_content(prompt)
         summary = response.text
 
         # Update stats
         update_stats("total_summaries")
         
-        # Add to user history (Using correct variable name)
+        # Add to user history
         current_t_len = len(transcript) if transcript else 0
         user_history[user_id].append({
             "video_id": video_id,
@@ -435,7 +434,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for part in parts:
                 await update.message.reply_text(f"📝 {part}", parse_mode='Markdown')
         else:
-            # Agar summary choti hai toh status message ko edit kar sakte hain
             try:
                 await status_msg.edit_text(f"📝 *SUMMARY:*\n\n{summary}\n\n📢 *Apne doston ko bhi bhej!* 🎉", parse_mode='Markdown')
             except:
@@ -446,8 +444,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Handle message error: {e}")
         update_stats("errors")
-        await update.message.reply_text(f"❌ *Error Aaya!* Retry kar bhai! 🔄")
-
+        try:
+            await update.message.reply_text(f"❌ *Error Aaya!* Technical Issue: {str(e)[:50]}... Phir se try kar bhai! 🔄")
         except:
             pass
 
