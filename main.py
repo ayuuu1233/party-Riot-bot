@@ -187,7 +187,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # New Professional Welcome Text with Dividers and Style
         welcome_text = (
             f"✨ *Namaste {user_name}!* ✨\n\n"
-            "🎬 *AI YouTube Summarizer Bot 2.0* mein aapka swagat hai.\n"
+            "🎬 *AI YouTube Summarizer Bot* mein aapka swagat hai.\n"
             "Main aapke lambe videos aur shorts ko seconds mein summarize kar sakta hoon! 🚀\n\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "🌟 *Bot Features:*\n"
