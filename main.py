@@ -607,6 +607,10 @@ def main():
 
         app.add_error_handler(error_handler)
         
+        drop_pending_updates
+        app.run_polling(drop_pending_updates=True)
+
+        
         try:
             loop = asyncio.get_event_loop()
             loop.create_task(reset_hourly_limits()) 
