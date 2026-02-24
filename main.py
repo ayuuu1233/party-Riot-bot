@@ -436,8 +436,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             try:
                 await status_msg.edit_text(f"📝 *SUMMARY:*\n\n{summary}\n\n📢 *Apne doston ko bhi bhej!* 🎉", parse_mode='Markdown')
-            except:
+            except Exception:
+            
                 await update.message.reply_text(f"📝 *SUMMARY:*\n\n{summary}", parse_mode='Markdown')
+
         
         logger.info(f"User {user_id} - Summary generated for {video_id}")
         
