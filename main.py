@@ -588,48 +588,53 @@ async def post_init(application):
 # ================== 7. MAIN APPLICATION ==================
 def main():
     try:
-        logger.info("🚀 Starting AI YouTube Summarizer Bot 2.0...")
-        
-        app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
-        
+        logger.info("🚀 Booting AI YouTube Summarizer (Professional Mode)...")
+
+        keep_alive()  # Run first (Render safe)
+
+        app = (
+            ApplicationBuilder()
+            .token(TOKEN)
+            .post_init(post_init)
+            .build()
+        )
+
+        # ================= HANDLERS =================
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler('feedback', feedback_command)],
             states={
-                "waiting_for_feedback": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_feedback)]
+                "waiting_for_feedback": [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, handle_feedback)
+                ]
             },
             fallbacks=[CommandHandler('cancel', cancel)]
         )
-        
+
         app.add_handler(CommandHandler("start", start))
-        app.add_handler(CommandHandler("admin_stats", admin_stats))
-        app.add_handler(conv_handler) 
         app.add_handler(CommandHandler("help", help_command))
         app.add_handler(CommandHandler("stats", status_command))
-        app.add_handler(CallbackQueryHandler(button_callback))
-        app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
         app.add_handler(CommandHandler("about", about_command))
         app.add_handler(CommandHandler("mystats", mystats_command))
         app.add_handler(CommandHandler("ping", ping_command))
+        app.add_handler(CommandHandler("admin_stats", admin_stats))
+        app.add_handler(CallbackQueryHandler(button_callback))
+        app.add_handler(conv_handler)
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
         app.add_error_handler(error_handler)
-        
+
+        # ================= BACKGROUND JOB =================
+        app.job_queue.run_repeating(
+            lambda ctx: reset_hourly_limits(),
+            interval=3600,
+            first=3600
+        )
+
+        logger.info("✅ All systems initialized successfully.")
         app.run_polling(drop_pending_updates=True)
 
-        
-        try:
-            loop = asyncio.get_event_loop()
-            loop.create_task(reset_hourly_limits()) 
-            logger.info("⏰ Async reset task started successfully")
-        except Exception as loop_error:
-            logger.error(f"Loop error: {loop_error}")
-        
-        keep_alive()
-        
-        logger.info("✅ Bot started successfully!")
-        
-        
     except Exception as e:
-        logger.error(f"Failed to start bot: {e}")
+        logger.critical(f"❌ Fatal Startup Error: {e}")
         raise
 
 if __name__ == '__main__':
