@@ -167,13 +167,15 @@ async def reset_hourly_limits(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Ultra-Professional Start with Anime Style & Clean Logic"""
+    """Ultra-Professional Start with Premium Effects & Raiden Shogun Style"""
     try:
         user_id = update.message.from_user.id
         user_name = update.message.from_user.first_name
+        chat_id = update.effective_chat.id
         
-        # Action: Typing... (Professional touch)
-        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="upload_photo")
+        # 1. Action: Typing... & Emoji Reaction (Lightning style)
+        await context.bot.send_chat_action(chat_id=chat_id, action="upload_photo")
+        await update.message.set_reaction(reaction=[{"type": "emoji", "emoji": "⚡"}])
         
         # User Tracking (Conflict-free logic)
         if user_id not in user_data:
@@ -188,24 +190,30 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot_username = bot_obj.username
         share_url = f"https://t.me/share/url?url=t.me/{bot_username}&text=Bhai, ye AI bot YouTube summary nikaal deta hai! 🔥"
         
+        # ─── BOOTING MESSAGE WITH HEART EFFECT ───
+        booting_msg = await update.message.reply_text(
+            f"✨ 𝖲𝗎𝗆𝗆𝗈𝗇𝗂𝗇𝗀 𝖤𝗍𝖾𝗋𝗇𝗂𝗍𝗒 𝖿𝗈𝗋 <b>{user_name}</b>...",
+            parse_mode='HTML',
+            message_effect_id="5104841245755180586" # Heart Pop-up ❤️
+        )
+        await asyncio.sleep(1.2)
+
         # ─── PROFESSIONAL FORMATTING & FONTS ───
-        # Note: Unicode fonts looks premium on all devices
         welcome_text = (
-            f"⚡ 𝖶𝖾𝗅𝖼𝗈𝗆𝖾, {user_name}! ⚡\n\n"
-            "✨ *『 𝖠𝖨 𝖸𝖮𝖴𝖳𝖴𝖡𝖤 𝖲𝖴𝖬𝖬𝖠𝖱𝖨𝖹𝖤𝖱 』*\n"
+            f"⚡ 𝖶𝖾𝗅𝖼𝗈𝗆𝖾, <b>{user_name}</b>! ⚡\n\n"
+            "✨ <b>『 𝖠𝖨 𝖸𝖮𝖴𝖳𝖴𝖡𝖤 𝖲𝖴𝖬𝖬𝖠𝖱𝖨𝖹𝖤𝖱 』</b>\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "🎬 *ꜱʏꜱᴛᴇᴍ ᴄᴀᴘᴀʙɪʟɪᴛɪᴇꜱ:*\n"
-            "┠ 🔹 *ꜰᴀꜱᴛ ꜱᴜᴍᴍᴀʀʏ:* Seconds mein results\n"
-            "┠ 🔹 *ʜɪɴɢʟɪꜱʜ ꜱᴜᴘᴘᴏʀᴛ:* Easy to understand\n"
-            "┠ 🔹 *ꜱᴍᴀʀᴛ ᴀɪ:* No captions? No problem!\n\n"
-            "🚀 *ʜᴏᴡ ᴛᴏ ᴜꜱᴇ:*\n"
+            "🎬 <b>ꜱʏꜱᴛᴇᴍ ᴄᴀᴘᴀʙɪʟɪᴛɪᴇꜱ:</b>\n"
+            "┠ 🔹 <b>ꜰᴀꜱᴛ ꜱᴜᴍᴍᴀʀʏ:</b> Seconds mein results\n"
+            "┠ 🔹 <b>ʜɪɴɢʟɪꜱʜ ꜱᴜᴘᴘᴏʀᴛ:</b> Easy to understand\n"
+            "┠ 🔹 <b>ꜱᴍᴀʀᴛ ᴀɪ:</b> Gemini 1.5 Flash Engine\n\n"
+            "🚀 <b>ʜᴏᴡ ᴛᴏ ᴜꜱᴇ:</b>\n"
             "➠ Bas YouTube link copy-paste karo!\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "📊 *ꜱᴛᴀᴛᴜꜱ:* `System Online` 🟢\n"
-            "⏱️ *ʟɪᴍɪᴛꜱ:* `50 req/hr` | `5s cooldown`"
+            "📊 <b>ꜱᴛᴀᴛᴜꜱ:</b> <code>System Online</code> 🟢\n"
+            "⏱️ <b>ʟɪᴍɪᴛꜱ:</b> <code>50 req/hr</code> | <code>5s cooldown</code>"
         )
         
-        # Premium Buttons
         keyboard = [
             [InlineKeyboardButton("📖 𝖧𝖾𝗅𝗉 𝖬𝖾𝗇𝗎", callback_data='help'), 
              InlineKeyboardButton("📈 𝖲𝗍𝖺𝗍𝗎𝗌", callback_data='status')],
@@ -213,30 +221,44 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
              InlineKeyboardButton("🆘 𝖲𝗎𝗉𝗉𝗈𝗋𝗍", callback_data='support')],
             [InlineKeyboardButton("📢 𝖲𝗁𝖺𝗋𝖾 𝗐𝗂𝗍𝗁 𝖥𝗋𝗂𝖾𝗇𝖽𝗌", url=share_url)]
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+
         
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
         
+                # Emoji Reaction (Lightning/Nobara Style)
         try:
+            await update.message.set_reaction(reaction=[{"type": "emoji", "emoji": "⚡"}])
+        except Exception:
+            pass 
+
+        #  Typing action start
+        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="upload_photo")
+
+        # ─── TRY/EXCEPT FOR ANIMATION ───
+        try:
+            # Note: parse_mode 'HTML' use kiya hai taaki tags work karein
             await context.bot.send_animation(
                 chat_id=update.effective_chat.id,
                 animation=gif_url,
                 caption=welcome_text,
                 reply_markup=reply_markup,
-                parse_mode='Markdown'
+                parse_mode='HTML',
+                message_effect_id="5046509860489128014" # 🔥 Fire/Lightning Effect
             )
-        except Exception:
+        except Exception as e:
+            logger.warning(f"GIF failed, sending text: {e}")
             # Fallback text if GIF fails
             await update.message.reply_text(
                 welcome_text, 
                 reply_markup=reply_markup, 
-                parse_mode='Markdown'
+                parse_mode='HTML'
             )
             
     except Exception as e:
         logger.error(f"Start error: {e}")
-        # Conflict hone par silent fail ya chota msg
+        # Conflict hone par silent fail
         pass 
+
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle inline button clicks - Fixed for GIF compatibility"""
