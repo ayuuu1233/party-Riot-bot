@@ -207,8 +207,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # STAGE 4: The Strawberry "Flash" Transition
         await loader.edit_text("🍓 <b>DOMAINE EXPANSION: ETERNITY!</b>", 
-                               parse_mode='HTML', 
-                               message_effect_id="5159385139981059251") # Strawberry Pop
+                               parse_mode='HTML'
+                               ) # Strawberry Pop
         await asyncio.sleep(1.2)
         await loader.delete()
 
@@ -245,9 +245,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 animation=gif_url,
                 caption=welcome_text,
                 reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode='HTML',
-                message_effect_id="5046509860489128014"
+                parse_mode='HTML'
             )
+            
         except Exception as e:
             logger.warning(f"GIF failed, sending text: {e}")
             await update.message.reply_text(
@@ -648,6 +648,7 @@ def main():
         app.add_handler(CommandHandler("help", help_command))
         app.add_handler(CommandHandler("stats", status_command))
         app.add_handler(CommandHandler("about", about_command))
+        app.add_handler(CommandHandler("support", support_command)) 
         app.add_handler(CommandHandler("mystats", mystats_command))
         app.add_handler(CommandHandler("ping", ping_command))
         app.add_handler(CommandHandler("admin_stats", admin_stats))
