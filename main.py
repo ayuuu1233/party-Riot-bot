@@ -238,7 +238,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Final Premium Animation with Fire/Lightning Effect
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
-        
+   
+    try:  
         await context.bot.send_animation(
             chat_id=chat_id,
             animation=gif_url,
@@ -248,7 +249,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             message_effect_id="5046509860489128014" # Fire/Lightning Pop-up
         )
             
-
         except Exception as e:
             logger.warning(f"GIF failed, sending text: {e}")
             # Fallback text if GIF fails
