@@ -239,22 +239,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Final Premium Animation with Fire/Lightning Effect
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
 
-try:
-    await context.bot.send_animation(
-        chat_id=chat_id,
-        animation=gif_url,
-        caption=welcome_text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='HTML',
-        message_effect_id="5046509860489128014"
-    )
-except Exception as e:
-    logger.warning(f"GIF failed, sending text: {e}")
-    await update.message.reply_text(
-        welcome_text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='HTML'
-    )
+        try:
+            await context.bot.send_animation(
+                chat_id=chat_id,
+                animation=gif_url,
+                caption=welcome_text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='HTML',
+                message_effect_id="5046509860489128014"
+            )
+        except Exception as e:
+            logger.warning(f"GIF failed, sending text: {e}")
+            await update.message.reply_text(
+                welcome_text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='HTML'
+            )
             
     except Exception as e:
         logger.error(f"Start error: {e}")
@@ -487,7 +487,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         # 3. Initializing Animation
-        status_msg = await update.message.reply_text("🌀 *Initializing AI System...*")
+        status_msg = await update.message.reply_text(
+    "🌀 *Initializing AI System...*",
+    parse_mode='Markdown'
+        )
         
         # Update stats
         user_cooldown[user_id] = datetime.now()
@@ -515,28 +518,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # 5. Generate Summary
         try:
-    response = model.generate_content(prompt)
-    summary = response.text if response and response.text else "❌ Summary generate nahi ho payi."
-except Exception as e:
-    logger.error(f"Gemini error: {e}")
-    update_stats("errors")
-    await status_msg.edit_text("❌ AI Error aaya! Thoda baad try karo.")
-    return
-        
-        await status_msg.edit_text("✍️ *Finalizing Detailed Summary...*\n`[▓▓▓▓▓▓▓▓▓▓] 100%`", parse_mode='Markdown')
+            response = model.generate_content(prompt)
+            summary = response.text if response and response.text else "❌ Summary generate nahi ho payi."
+        except Exception as e:
+            logger.error(f"Gemini error: {e}")
+            update_stats("errors")
+            await status_msg.edit_text("❌ AI Error aaya! Thoda baad try karo.")
+            return
         await asyncio.sleep(0.5)
 
         # 6. History and Stats Update
         update_stats("total_summaries")
         current_t_len = len(transcript) if transcript else 0
         if len(user_history[user_id]) > 20:
-    user_history[user_id].pop(0)
+            user_history[user_id].pop(0)
 
-user_history[user_id].append({
-    "video_id": video_id,
-    "timestamp": datetime.now().isoformat(),
-    "transcript_length": current_t_len
-})
+        user_history[user_id].append({
+            "video_id": video_id,
+            "timestamp": datetime.now().isoformat(),
+            "transcript_length": current_t_len
+        })
 
         # 7. Final Output Formatting
         final_header = "✨ *YOUTUBE VIDEO SUMMARY* ✨\n━━━━━━━━━━━━━━━━━━━━━━\n"
