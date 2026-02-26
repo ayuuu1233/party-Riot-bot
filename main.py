@@ -238,23 +238,23 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Final Premium Animation with Fire/Lightning Effect
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
-   
-       try:
-             await context.bot.send_animation(
-                chat_id=chat_id,
-                animation=gif_url,
-                caption=welcome_text,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode='HTML',
-                message_effect_id="5046509860489128014"
-            )
-        except Exception as e:
-            logger.warning(f"GIF failed, sending text: {e}")
-            await update.message.reply_text(
-                welcome_text,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode='HTML'
-            )
+
+try:
+    await context.bot.send_animation(
+        chat_id=chat_id,
+        animation=gif_url,
+        caption=welcome_text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='HTML',
+        message_effect_id="5046509860489128014"
+    )
+except Exception as e:
+    logger.warning(f"GIF failed, sending text: {e}")
+    await update.message.reply_text(
+        welcome_text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='HTML'
+    )
             
     except Exception as e:
         logger.error(f"Start error: {e}")
@@ -482,7 +482,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not video_id:
             await update.message.reply_text(
                 "⚠️ *Invalid Link!* 🤔\n\nSahi YouTube link bhej bhai!",
-                parse_mode='MarkdownV2'
+                parse_mode='Markdown'
             )
             return
         
@@ -511,15 +511,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             prompt = f"Mujhe iss YouTube video ki VERY DETAILED SUMMARY Hinglish mein chahiye. Title: {video_info['title']}\nDescription: {video_info['description']}"
         else:
             await status_msg.edit_text("🧠 *AI is Analyzing Content...*\n`[▓▓▓▓▓▓▓░░░] 70%`", parse_mode='Markdown')
-            prompt = f"Mujhe iss YouTube video ke liye VERY DETAILED SUMMARY Hinglish mein chahiye. Video transcript:\n\n{transcript[:100000]}"
+            prompt = f"Mujhe iss YouTube video ke liye VERY DETAILED SUMMARY Hinglish mein chahiye. Video transcript:\n\n{transcript[:50000]}"
 
         # 5. Generate Summary
         try:
-           response = model.generate_content(prompt)
-           summary = response.text if response and response.text else "❌ Summary generate nahi ho payi."
-       except Exception as e:
-       logger.error(f"Gemini error: {e}")
-       update_stats("errors")
+    response = model.generate_content(prompt)
+    summary = response.text if response and response.text else "❌ Summary generate nahi ho payi."
+except Exception as e:
+    logger.error(f"Gemini error: {e}")
+    update_stats("errors")
+    await status_msg.edit_text("❌ AI Error aaya! Thoda baad try karo.")
+    return
         
         await status_msg.edit_text("✍️ *Finalizing Detailed Summary...*\n`[▓▓▓▓▓▓▓▓▓▓] 100%`", parse_mode='Markdown')
         await asyncio.sleep(0.5)
@@ -528,11 +530,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         update_stats("total_summaries")
         current_t_len = len(transcript) if transcript else 0
         if len(user_history[user_id]) > 20:
-        user_history[user_id].pop(0)
-            "video_id": video_id,
-            "timestamp": datetime.now().isoformat(),
-            "transcript_length": current_t_len
-        })
+    user_history[user_id].pop(0)
+
+user_history[user_id].append({
+    "video_id": video_id,
+    "timestamp": datetime.now().isoformat(),
+    "transcript_length": current_t_len
+})
 
         # 7. Final Output Formatting
         final_header = "✨ *YOUTUBE VIDEO SUMMARY* ✨\n━━━━━━━━━━━━━━━━━━━━━━\n"
