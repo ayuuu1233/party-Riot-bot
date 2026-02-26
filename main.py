@@ -157,12 +157,13 @@ def check_rate_limit(user_id):
     
     return True, "OK"
 
-def reset_hourly_limits():
-    """Reset hourly request counts"""
+async def reset_hourly_limits(context: ContextTypes.DEFAULT_TYPE):
+    """Reset hourly request counts safely"""
     global request_counts, last_reset_time
     request_counts.clear()
     last_reset_time = datetime.now()
-    logger.info("🔄 Hourly limits reset! All users can make requests again.")
+    logger.info("🔄 Hourly limits reset successfully!")
+ 
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -622,12 +623,14 @@ def main():
 
         app.add_error_handler(error_handler)
 
+        
         if app.job_queue:
             app.job_queue.run_repeating(
-                lambda ctx: reset_hourly_limits(),
-                interval=3600,
+                reset_hourly_limits, 
+                interval=3600, 
                 first=3600
-            )
+    )
+
             logger.info("⏰ Background Job Queue started.")
         else:
             logger.warning("⚠️ JobQueue missing! Reset job not started.")
