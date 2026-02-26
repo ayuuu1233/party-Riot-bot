@@ -416,6 +416,21 @@ async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(about_text, parse_mode='Markdown')
 
+async def support_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    support_text = (
+        "🆘 *Support Information:*\n\n"
+        "❌ Video fail ho raha hai?\n"
+        "→ Private videos ki summary nahi nikal sakti\n"
+        "→ Dusra video try kar!\n\n"
+        "⚠️ Rate limit exceed?\n"
+        "→ 1 ghante baad try kar\n\n"
+        "🐛 Bug mil gaya?\n"
+        "→ /feedback command use kar\n\n"
+        "📞 Direct Contact:\n"
+        "→ @Ayushboy1 (Creator)"
+    )
+    await update.message.reply_text(support_text, parse_mode='Markdown')
+    
 async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """User ke personal usage statistics"""
     user_id = update.effective_user.id
