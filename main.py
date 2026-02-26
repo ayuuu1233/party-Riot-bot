@@ -167,17 +167,20 @@ async def reset_hourly_limits(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Ultra-Professional Start with Premium Effects & Raiden Shogun Style"""
+    """The Most Advanced Animated Start Ever Built"""
     try:
         user_id = update.message.from_user.id
         user_name = update.message.from_user.first_name
         chat_id = update.effective_chat.id
         
-        # 1. Action: Typing... & Emoji Reaction (Lightning style)
-        await context.bot.send_chat_action(chat_id=chat_id, action="upload_photo")
-        await update.message.set_reaction(reaction=[{"type": "emoji", "emoji": "⚡"}])
-        
-        # User Tracking (Conflict-free logic)
+        # STAGE 1: The Triple Burst Reaction (Unique)
+        try:
+            await update.message.set_reaction(reaction=[{"type": "emoji", "emoji": "⚡"}])
+            await asyncio.sleep(0.1)
+            await update.message.set_reaction(reaction=[{"type": "emoji", "emoji": "🔥"}])
+        except: pass
+
+        # STAGE 2: User Tracking Logic
         if user_id not in user_data:
             user_data[user_id] = {
                 "first_name": user_name,
@@ -187,28 +190,39 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             update_stats("total_users")
         
         bot_obj = await context.bot.get_me()
-        bot_username = bot_obj.username
-        share_url = f"https://t.me/share/url?url=t.me/{bot_username}&text=Bhai, ye AI bot YouTube summary nikaal deta hai! 🔥"
-        
-        # ─── BOOTING MESSAGE WITH HEART EFFECT ───
-        booting_msg = await update.message.reply_text(
-            f"✨ 𝖲𝗎𝗆𝗆𝗈𝗇𝗂𝗇𝗀 𝖤𝗍𝖾𝗋𝗇𝗂𝗍𝗒 𝖿𝗈𝗋 <b>{user_name}</b>...",
-            parse_mode='HTML',
-            message_effect_id="5104841245755180586" # Heart Pop-up ❤️
-        )
-        await asyncio.sleep(1.2)
+        share_url = f"https://t.me/share/url?url=t.me/{bot_obj.username}&text=Check+this+AI+God!+⚡"
 
-        # ─── PROFESSIONAL FORMATTING & FONTS ───
+        # STAGE 3: Glitch-Style Loading Animation (No one has this!)
+        loader = await update.message.reply_text("🌀 <code>Accessing Neural Network...</code>", parse_mode='HTML')
+        
+        frames = [
+            "📡 <code>Establishing Secure Link... [||---]</code>",
+            "🧬 <code>Injecting AI Modules... [||||-]</code>",
+            "⚡ <code>Electro Vision Synchronized! [||||||]</code>"
+        ]
+        
+        for frame in frames:
+            await asyncio.sleep(0.5)
+            await loader.edit_text(frame, parse_mode='HTML')
+
+        # STAGE 4: The Strawberry "Flash" Transition
+        await loader.edit_text("🍓 <b>DOMAINE EXPANSION: ETERNITY!</b>", 
+                               parse_mode='HTML', 
+                               message_effect_id="5159385139981059251") # Strawberry Pop
+        await asyncio.sleep(1.2)
+        await loader.delete()
+
+        # STAGE 5: Final God-Tier Interface
         welcome_text = (
-            f"⚡ 𝖶𝖾𝗅𝖼𝗈𝗆𝖾, <b>{user_name}</b>! ⚡\n\n"
+            f"👑 <b>Greetings, Electro Archon {user_name}!</b>\n\n"
             "✨ <b>『 𝖠𝖨 𝖸𝖮𝖴𝖳𝖴𝖡𝖤 𝖲𝖴𝖬𝖬𝖠𝖱𝖨𝖹𝖤𝖱 』</b>\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "🎬 <b>ꜱʏꜱᴛᴇᴍ ᴄᴀᴘᴀʙɪʟɪᴛɪᴇꜱ:</b>\n"
-            "┠ 🔹 <b>ꜰᴀꜱᴛ ꜱᴜᴍᴍᴀʀʏ:</b> Seconds mein results\n"
+            "┠ 🔹 <b>ꜰᴀꜱᴛ ꜱᴜᴍᴍᴀʀʏ:</b> Results in seconds\n"
             "┠ 🔹 <b>ʜɪɴɢʟɪꜱʜ ꜱᴜᴘᴘᴏʀᴛ:</b> Easy to understand\n"
-            "┠ 🔹 <b>ꜱᴍᴀʀᴛ ᴀɪ:</b> Gemini 1.5 Flash Engine\n\n"
+            "┠ 🔹 <b>ꜱᴍᴀʀᴛ ᴀɪ:</b> Powered by Gemini 1.5\n\n"
             "🚀 <b>ʜᴏᴡ ᴛᴏ ᴜꜱᴇ:</b>\n"
-            "➠ Bas YouTube link copy-paste karo!\n"
+            "➠ Send a YouTube link to begin.\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "📊 <b>ꜱᴛᴀᴛᴜꜱ:</b> <code>System Online</code> 🟢\n"
             "⏱️ <b>ʟɪᴍɪᴛꜱ:</b> <code>50 req/hr</code> | <code>5s cooldown</code>"
@@ -219,32 +233,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
              InlineKeyboardButton("📈 𝖲𝗍𝖺𝗍𝗎𝗌", callback_data='status')],
             [InlineKeyboardButton("👤 𝖬𝗒 𝖲𝗍𝖺𝗍𝗌", callback_data='mystats'),
              InlineKeyboardButton("🆘 𝖲𝗎𝗉𝗉𝗈𝗋𝗍", callback_data='support')],
-            [InlineKeyboardButton("📢 𝖲𝗁𝖺𝗋𝖾 𝗐𝗂𝗍𝗁 𝖥𝗋𝗂𝖾𝗇𝖽𝗌", url=share_url)]
+            [InlineKeyboardButton("📢 𝖤𝗑𝗉𝖺𝗇𝖽 𝖣𝗈𝗆𝖺𝗂𝗇", url=share_url)]
         ]
 
-        
+        # Final Premium Animation with Fire/Lightning Effect
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
         
-                # Emoji Reaction (Lightning/Nobara Style)
-        try:
-            await update.message.set_reaction(reaction=[{"type": "emoji", "emoji": "⚡"}])
-        except Exception:
-            pass 
+        await context.bot.send_animation(
+            chat_id=chat_id,
+            animation=gif_url,
+            caption=welcome_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='HTML',
+            message_effect_id="5046509860489128014" # Fire/Lightning Pop-up
+        )
+            
 
-        #  Typing action start
-        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="upload_photo")
-
-        # ─── TRY/EXCEPT FOR ANIMATION ───
-        try:
-            # Note: parse_mode 'HTML' use kiya hai taaki tags work karein
-            await context.bot.send_animation(
-                chat_id=update.effective_chat.id,
-                animation=gif_url,
-                caption=welcome_text,
-                reply_markup=reply_markup,
-                parse_mode='HTML',
-                message_effect_id="5046509860489128014" # 🔥 Fire/Lightning Effect
-            )
         except Exception as e:
             logger.warning(f"GIF failed, sending text: {e}")
             # Fallback text if GIF fails
