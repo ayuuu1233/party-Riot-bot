@@ -239,22 +239,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Final Premium Animation with Fire/Lightning Effect
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
    
-    try:  
-        await context.bot.send_animation(
-            chat_id=chat_id,
-            animation=gif_url,
-            caption=welcome_text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode='HTML',
-            message_effect_id="5046509860489128014" # Fire/Lightning Pop-up
-        )
-            
+    try:
+            await context.bot.send_animation(
+                chat_id=chat_id,
+                animation=gif_url,
+                caption=welcome_text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='HTML',
+                message_effect_id="5046509860489128014"
+            )
         except Exception as e:
             logger.warning(f"GIF failed, sending text: {e}")
-            # Fallback text if GIF fails
             await update.message.reply_text(
-                welcome_text, 
-                reply_markup=reply_markup, 
+                welcome_text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
                 parse_mode='HTML'
             )
             
@@ -516,8 +514,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             prompt = f"Mujhe iss YouTube video ke liye VERY DETAILED SUMMARY Hinglish mein chahiye. Video transcript:\n\n{transcript[:100000]}"
 
         # 5. Generate Summary
-        response = model.generate_content(prompt)
-        summary = response.text if response and response.text else "❌ Summary generate nahi ho payi."
+        try:
+           response = model.generate_content(prompt)
+           summary = response.text if response and response.text else "❌ Summary generate nahi ho payi."
+       except Exception as e:
+       logger.error(f"Gemini error: {e}")
+       update_stats("errors")
         
         await status_msg.edit_text("✍️ *Finalizing Detailed Summary...*\n`[▓▓▓▓▓▓▓▓▓▓] 100%`", parse_mode='Markdown')
         await asyncio.sleep(0.5)
@@ -525,7 +527,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 6. History and Stats Update
         update_stats("total_summaries")
         current_t_len = len(transcript) if transcript else 0
-        user_history[user_id].append({
+        if len(user_history[user_id]) > 20:
+        user_history[user_id].pop(0)
             "video_id": video_id,
             "timestamp": datetime.now().isoformat(),
             "transcript_length": current_t_len
