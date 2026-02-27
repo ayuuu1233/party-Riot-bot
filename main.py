@@ -673,24 +673,31 @@ def main():
 
         app.add_error_handler(error_handler)
 
-        
         if app.job_queue:
             app.job_queue.run_repeating(
                 reset_hourly_limits, 
                 interval=3600, 
                 first=3600
-    )
-
+            )
             logger.info("⏰ Background Job Queue started.")
         else:
             logger.warning("⚠️ JobQueue missing! Reset job not started.")
 
         logger.info("✅ All systems initialized successfully.")
-        
-        app.run_polling(drop_pending_updates=True)
+
+        # 🔥 IMPORTANT: Remove any existing webhook (prevents polling conflict)
+        app.bot.delete_webhook(drop_pending_updates=True)
+
+        # 🔥 Conflict-safe polling
+        app.run_polling(
+            drop_pending_updates=True,
+            allowed_updates=Update.ALL_TYPES,
+            close_loop=False
+        )
 
     except Exception as e:
         logger.critical(f"❌ Fatal Startup Error: {e}")
+
 
 if __name__ == '__main__':
     main()
