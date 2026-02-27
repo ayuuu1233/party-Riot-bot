@@ -171,20 +171,21 @@ async def reset_hourly_limits(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """The Most Advanced Animated Start Ever Built"""
+    """Professional Animated Start"""
     try:
         user_id = update.message.from_user.id
         user_name = update.message.from_user.first_name
         chat_id = update.effective_chat.id
-        
-        # STAGE 1: The Triple Burst Reaction (Unique)
-        try:
-            await update.message.set_reaction(reaction=[{"type": "emoji", "emoji": "🍓"}])
-            await asyncio.sleep(0.1)
-        except: pass   
-        
 
-        # STAGE 2: User Tracking Logic
+        # 🍓 STAGE 1: Strawberry Reaction
+        try:
+            await update.message.set_reaction(
+                reaction=[{"type": "emoji", "emoji": "🍓"}]
+            )
+        except Exception:
+            pass
+
+        # 📊 STAGE 2: User Tracking
         if user_id not in user_data:
             user_data[user_id] = {
                 "first_name": user_name,
@@ -192,57 +193,67 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "total_requests": 0
             }
             update_stats("total_users")
-        
-        bot_obj = await context.bot.get_me()
-        share_url = f"https://t.me/share/url?url=t.me/{bot_obj.username}&text=Check+this+AI+God!+⚡"
 
-        # STAGE 3: Glitch-Style Loading Animation (No one has this!)
-        loader = await update.message.reply_text("🌀 <code>Accessing Neural Network...</code>", parse_mode='HTML')
-        
+        bot_obj = await context.bot.get_me()
+        share_url = f"https://t.me/share/url?url=t.me/{bot_obj.username}&text=Check+this+AI+Bot!+⚡"
+
+        # 🌀 STAGE 3: Loading Animation
+        loader = await update.message.reply_text(
+            "🌀 <code>Accessing Neural Network...</code>",
+            parse_mode='HTML'
+        )
+
         frames = [
             "📡 <code>Establishing Secure Link... [||---]</code>",
             "🧬 <code>Injecting AI Modules... [||||-]</code>",
             "⚡ <code>Electro Vision Synchronized! [||||||]</code>"
         ]
-        
+
         for frame in frames:
             await asyncio.sleep(0.5)
             await loader.edit_text(frame, parse_mode='HTML')
 
-        # STAGE 4: The Strawberry "Flash" Transition
-        await loader.edit_text("🎐 <b>DOMAINE EXPANSION: ETERNITY!</b>", 
-                               parse_mode='HTML'
-                               ) # Strawberry Pop
+        await loader.edit_text(
+            "🎐 <b>DOMAIN EXPANSION: ETERNITY!</b>",
+            parse_mode='HTML'
+        )
+
         await asyncio.sleep(1.2)
         await loader.delete()
 
-        # STAGE 5: Final God-Tier Interface
+        # 🎬 FINAL INTERFACE
         welcome_text = (
-            f"👑 <b>Greetings, Electro Archon {user_name}!</b>\n\n"
-            "✨ <b>『 𝖠𝖨 𝖸𝖮𝖴𝖳𝖴𝖡𝖤 𝖲𝖴𝖬𝖬𝖠𝖱𝖨𝖹𝖤𝖱 』</b>\n"
+            f"👑 <b>Greetings, {user_name}!</b>\n\n"
+            "✨ <b>『 AI YOUTUBE SUMMARIZER 』</b>\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "🎬 <b>ꜱʏꜱᴛᴇᴍ ᴄᴀᴘᴀʙɪʟɪᴛɪᴇꜱ:</b>\n"
-            "┠ 🔹 <b>ꜰᴀꜱᴛ ꜱᴜᴍᴍᴀʀʏ:</b> Results in seconds\n"
-            "┠ 🔹 <b>ʜɪɴɢʟɪꜱʜ ꜱᴜᴘᴘᴏʀᴛ:</b> Easy to understand\n"
-            "┠ 🔹 <b>ꜱᴍᴀʀᴛ ᴀɪ:</b> Powered by Gemini 1.5\n\n"
-            "🚀 <b>ʜᴏᴡ ᴛᴏ ᴜꜱᴇ:</b>\n"
-            "➠ Send a YouTube link to begin.\n"
+            "🎬 <b>System Capabilities:</b>\n"
+            "┠ 🔹 Fast Summary\n"
+            "┠ 🔹 Hinglish Support\n"
+            "┠ 🔹 Smart AI (Gemini 1.5)\n\n"
+            "🚀 <b>How to Use:</b>\n"
+            "➠ Send a YouTube link\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "📊 <b>ꜱᴛᴀᴛᴜꜱ:</b> <code>System Online</code> 🟢\n"
-            "⏱️ <b>ʟɪᴍɪᴛꜱ:</b> <code>50 req/hr</code> | <code>5s cooldown</code>"
+            "📊 <b>Status:</b> <code>Online</code> 🟢\n"
+            "⏱️ <b>Limits:</b> <code>50/hr</code> | <code>5s cooldown</code>"
         )
-        
+
         keyboard = [
-            [InlineKeyboardButton("📖 𝖧𝖾𝗅𝗉 𝖬𝖾𝗇𝗎", callback_data='help'), 
-             InlineKeyboardButton("📈 𝖲𝗍𝖺𝗍𝗎𝗌", callback_data='status')],
-            [InlineKeyboardButton("👤 𝖬𝗒 𝖲𝗍𝖺𝗍𝗌", callback_data='mystats'),
-             InlineKeyboardButton("🆘 𝖲𝗎𝗉𝗉𝗈𝗋𝗍", callback_data='support')],
-            [InlineKeyboardButton("📢 𝖤𝗑𝗉𝖺𝗇𝖽 𝖣𝗈𝗆𝖺𝗂𝗇", url=share_url)]
+            [
+                InlineKeyboardButton("📖 Help", callback_data='help'),
+                InlineKeyboardButton("📈 Status", callback_data='status')
+            ],
+            [
+                InlineKeyboardButton("👤 My Stats", callback_data='mystats'),
+                InlineKeyboardButton("🆘 Support", callback_data='support')
+            ],
+            [
+                InlineKeyboardButton("📢 Share Bot", url=share_url)
+            ]
         ]
 
-        # Final Premium Animation with Fire/Lightning Effect
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
 
+        # 🎥 Try Sending GIF
         try:
             await context.bot.send_animation(
                 chat_id=chat_id,
@@ -251,25 +262,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=InlineKeyboardMarkup(keyboard),
                 parse_mode='HTML'
             )
+
             await asyncio.sleep(0.6)
 
             await context.bot.send_message(
                 chat_id=chat_id,
                 text="❤️"
             )
-            
-    except Exception as e:
-            logger.warning(f"GIF failed, sending text: {e}")
+
+        except Exception as gif_error:
+            logger.warning(f"GIF failed, sending text instead: {gif_error}")
+
             await update.message.reply_text(
                 welcome_text,
                 reply_markup=InlineKeyboardMarkup(keyboard),
                 parse_mode='HTML'
             )
-            
+
     except Exception as e:
         logger.error(f"Start error: {e}")
-        # Conflict hone par silent fail
-        pass 
 
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
