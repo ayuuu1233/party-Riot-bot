@@ -175,10 +175,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # STAGE 1: The Triple Burst Reaction (Unique)
         try:
-            await update.message.set_reaction(reaction=[{"type": "emoji", "emoji": "⚡"}])
+            await update.message.set_reaction(reaction=[{"type": "emoji", "emoji": "🍓"}])
             await asyncio.sleep(0.1)
-            await update.message.set_reaction(reaction=[{"type": "emoji", "emoji": "🔥"}])
-        except: pass
+        except: pass   
+        
 
         # STAGE 2: User Tracking Logic
         if user_id not in user_data:
@@ -206,7 +206,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await loader.edit_text(frame, parse_mode='HTML')
 
         # STAGE 4: The Strawberry "Flash" Transition
-        await loader.edit_text("🍓 <b>DOMAINE EXPANSION: ETERNITY!</b>", 
+        await loader.edit_text("🎐 <b>DOMAINE EXPANSION: ETERNITY!</b>", 
                                parse_mode='HTML'
                                ) # Strawberry Pop
         await asyncio.sleep(1.2)
@@ -247,8 +247,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=InlineKeyboardMarkup(keyboard),
                 parse_mode='HTML'
             )
-            
-        except Exception as e:
+            await asyncio.sleep(0.6)
+
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text="❤️"
+            )
+    except Exception as e:
             logger.warning(f"GIF failed, sending text: {e}")
             await update.message.reply_text(
                 welcome_text,
