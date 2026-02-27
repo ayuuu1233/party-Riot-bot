@@ -171,13 +171,13 @@ async def reset_hourly_limits(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Professional Animated Start"""
+    """Professional Animated Start with exact Sequence"""
     try:
         user_id = update.message.from_user.id
         user_name = update.message.from_user.first_name
         chat_id = update.effective_chat.id
 
-        # 🍓 STAGE 1: Strawberry Reaction
+        # --- STEP 1: /start wale msg par Strawberry Reaction ---
         try:
             await update.message.set_reaction(
                 reaction=[{"type": "emoji", "emoji": "🍓"}]
@@ -185,43 +185,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
 
-        # 📊 STAGE 2: User Tracking
-        if user_id not in user_data:
-            user_data[user_id] = {
-                "first_name": user_name,
-                "joined_date": datetime.now().isoformat(),
-                "total_requests": 0
-            }
-            update_stats("total_users")
-
-        bot_obj = await context.bot.get_me()
-        share_url = f"https://t.me/share/url?url=t.me/{bot_obj.username}&text=Check+this+AI+Bot!+⚡"
-
-        # 🌀 STAGE 3: Loading Animation
+        # --- STEP 2: Strawberry Pop-up Effect ---
         loader = await update.message.reply_text(
-            "🌀 <code>Accessing Neural Network...</code>",
-            parse_mode='HTML'
+            "🍓 <b>INITIALIZING...</b>", 
+            parse_mode='HTML', 
+            message_effect_id="5159385139981059251" # Strawberry Pop effect
         )
+        await asyncio.sleep(1.5) # Pop-up dikhne ka time
 
+        # --- STEP 3: Love Emoji (Not Pop-up, just text) ---
+        await loader.edit_text("❤️ <b>CONNECTING TO DOMAIN...</b>", parse_mode='HTML')
+        await asyncio.sleep(1.0)
+
+        # --- STEP 4: Text Animation ---
         frames = [
             "📡 <code>Establishing Secure Link... [||---]</code>",
             "🧬 <code>Injecting AI Modules... [||||-]</code>",
             "⚡ <code>Electro Vision Synchronized! [||||||]</code>"
         ]
-
         for frame in frames:
-            await asyncio.sleep(0.5)
             await loader.edit_text(frame, parse_mode='HTML')
-
-        await loader.edit_text(
-            "🎐 <b>DOMAIN EXPANSION: ETERNITY!</b>",
-            parse_mode='HTML'
-        )
-
-        await asyncio.sleep(1.2)
+            await asyncio.sleep(0.8)
+        
+        # Purana message delete kar denge final interface se pehle
         await loader.delete()
 
-        # 🎬 FINAL INTERFACE
+        # --- STEP 5: GIF + Caption + Buttons + Love Effect Pop-up ---
         welcome_text = (
             f"👑 <b>Greetings, {user_name}!</b>\n\n"
             "✨ <b>『 AI YOUTUBE SUMMARIZER 』</b>\n"
@@ -236,51 +225,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📊 <b>Status:</b> <code>Online</code> 🟢\n"
             "⏱️ <b>Limits:</b> <code>50/hr</code> | <code>5s cooldown</code>"
         )
-
+        
         keyboard = [
-            [
-                InlineKeyboardButton("📖 Help", callback_data='help'),
-                InlineKeyboardButton("📈 Status", callback_data='status')
-            ],
-            [
-                InlineKeyboardButton("👤 My Stats", callback_data='mystats'),
-                InlineKeyboardButton("🆘 Support", callback_data='support')
-            ],
-            [
-                InlineKeyboardButton("📢 Share Bot", url=share_url)
-            ]
+            [InlineKeyboardButton("📖 Help", callback_data='help'), 
+             InlineKeyboardButton("📈 Status", callback_data='status')],
+            [InlineKeyboardButton("👤 My Stats", callback_data='mystats'),
+             InlineKeyboardButton("🆘 Support", callback_data='support')]
         ]
 
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
-
-        # 🎥 Try Sending GIF
+        
         try:
             await context.bot.send_animation(
                 chat_id=chat_id,
                 animation=gif_url,
                 caption=welcome_text,
                 reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode='HTML'
+                parse_mode='HTML',
+                message_effect_id="5104841245755180586" # 🔥 LOVE HEART Pop-up effect
             )
-
-            await asyncio.sleep(0.6)
-
-            await context.bot.send_message(
-                chat_id=chat_id,
-                text="❤️"
-            )
-
         except Exception as gif_error:
-            logger.warning(f"GIF failed, sending text instead: {gif_error}")
-
-            await update.message.reply_text(
-                welcome_text,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode='HTML'
-            )
-
+            logger.warning(f"GIF/Effect failed: {gif_error}")
+            await update.message.reply_text(welcome_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+            
     except Exception as e:
         logger.error(f"Start error: {e}")
+
 
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
