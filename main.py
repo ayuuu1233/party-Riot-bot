@@ -42,11 +42,15 @@ async def get_video_info_fallback(video_url):
     """Metadata fetcher with better error handling"""
     try:
         ydl_opts = {
-            'quiet': True, 
+            'quiet': True,
             'no_warnings': True,
             'extract_flat': False,
-            'skip_download': True
+            'skip_download': True,
+            'geo_bypass': True,
+            'nocheckcertificate': True,
+            'user_agent': 'Mozilla/5.0'
         }
+        
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
             return {
@@ -690,15 +694,13 @@ def main():
 
         logger.info("✅ All systems initialized successfully.")
 
-        # 🔥 IMPORTANT: Remove any existing webhook (prevents polling conflict)
-        app.bot.delete_webhook(drop_pending_updates=True)
 
         # 🔥 Conflict-safe polling
         app.run_polling(
             drop_pending_updates=True,
             allowed_updates=Update.ALL_TYPES,
-            close_loop=False
-        )
+        ) 
+        
 
     except Exception as e:
         logger.critical(f"❌ Fatal Startup Error: {e}")
