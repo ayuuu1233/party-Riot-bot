@@ -257,6 +257,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 chat_id=chat_id,
                 text="❤️"
             )
+            
     except Exception as e:
             logger.warning(f"GIF failed, sending text: {e}")
             await update.message.reply_text(
