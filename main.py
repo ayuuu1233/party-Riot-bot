@@ -39,27 +39,45 @@ model = genai.GenerativeModel('gemini-1.5-flash')
 
 # Ye function metadata (Title/Description) nikalne ke liye
 async def get_video_info_fallback(video_url):
-    """Metadata fetcher with better error handling"""
+    """
+    Metadata fail hone par Gemini se directly summary nikalne wala logic.
+   
+    """
     try:
+        # --- PHASE 1: Try Metadata Extraction (Faster) ---
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
-            'extract_flat': False,
-            'skip_download': True,
-            'geo_bypass': True,
-            'nocheckcertificate': True,
-            'user_agent': 'Mozilla/5.0'
+            'format': 'best',
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
-            return {
-                "title": info.get('title', 'No Title'),
-                "description": info.get('description', 'No Description')
-            }
+            title = info.get('title', 'Unknown Title')
+            description = info.get('description', 'No Description')
+            
+            # Agar metadata mil gaya toh summary generate karo
+            return await generate_summary_with_ai(title, description)
+
     except Exception as e:
-        logger.error(f"yt-dlp absolute failure: {e}")
-        return None
+        logger.error(f"Metadata fail: {e}")
+        
+        # --- PHASE 2: Fallback (Bina captions/metadata ke) ---
+        # Gemini ko directly link bhejkar analyze karwao
+        try:
+            prompt = f"Analyze this YouTube video link and provide a detailed Hinglish summary: {video_url}"
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as ai_error:
+            logger.error(f"AI Fallback fail: {ai_error}")
+            return "❌ Video summarize nahi ho paya. Link check karo."
+
+async def generate_summary_with_ai(title, description):
+    """Gemini AI prompt for summarization"""
+    prompt = f"Title: {title}\nDescription: {description}\n\nSummarize this in Hinglish."
+    response = model.generate_content(prompt)
+    return response.text
 
 
 # ================== 2. DATA MANAGEMENT ==================
