@@ -189,82 +189,97 @@ async def reset_hourly_limits(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Animated Start with Revised Sequence"""
     try:
         user_id = update.message.from_user.id
         user_name = update.message.from_user.first_name
         chat_id = update.effective_chat.id
 
-        # --- STEP 1: /start msg par Strawberry Reaction ---
+        # 1️⃣ /start message par 🤗 reaction
         try:
             await update.message.set_reaction(
-                reaction=[{"type": "emoji", "emoji": "🍓"}]
+                reaction=[{"type": "emoji", "emoji": "🤗"}]
             )
         except Exception:
             pass
 
-        # --- STEP 2: Strawberry Pop-up Effect ---
-        loader = await update.message.reply_text(
-            "🍓 <b>INITIALIZING...</b>", 
-            parse_mode='HTML', 
-            message_effect_id="5159385139981059251" # Strawberry Pop effect
+        # 2️⃣ 🤗 Pop-up effect
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="🤗 <b>Welcome Boss!</b>",
+            parse_mode="HTML",
+            message_effect_id="5104841245755180586"
         )
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(1.2)
 
-        # --- STEP 3: Love Text (Not Pop-up) ---
-        await loader.edit_text("❤️ <b>CONNECTING TO DOMAIN...</b>", parse_mode='HTML')
-        await asyncio.sleep(1.0)
+        # 3️⃣ ❤️ Love Pop-up effect
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="❤️ <b>Initializing Love Protocol...</b>",
+            parse_mode="HTML",
+            message_effect_id="5104841245755180586"
+        )
+        await asyncio.sleep(1.2)
 
-        # --- STEP 4: Text Animation ---
+        # 4️⃣ Text Animation
+        loader = await context.bot.send_message(
+            chat_id=chat_id,
+            text="🌀 <code>Booting AI System...</code>",
+            parse_mode="HTML"
+        )
+
         frames = [
             "📡 <code>Establishing Secure Link... [||---]</code>",
             "🧬 <code>Injecting AI Modules... [||||-]</code>",
             "⚡ <code>Electro Vision Synchronized! [||||||]</code>"
         ]
+
         for frame in frames:
-            await loader.edit_text(frame, parse_mode='HTML')
             await asyncio.sleep(0.8)
-        
+            await loader.edit_text(frame, parse_mode="HTML")
+
+        await asyncio.sleep(1)
         await loader.delete()
 
-        # --- STEP 5: Final GIF + Fire Effect ---
+        # 5️⃣ Final GIF + Caption + Buttons
         welcome_text = (
             f"👑 <b>Greetings, {user_name}!</b>\n\n"
             "✨ <b>『 AI YOUTUBE SUMMARIZER 』</b>\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "🎬 <b>System Capabilities:</b>\n"
-            "┠ 🔹 Fast Summary\n"
-            "┠ 🔹 Hinglish Support\n"
-            "┠ 🔹 Smart AI (Gemini 1.5)\n\n"
-            "🚀 <b>How to Use:</b>\n"
-            "➠ Send a YouTube link\n"
+            "🎬 Send any YouTube link\n"
+            "⚡ Get Detailed Hinglish Summary\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "📊 <b>Status:</b> <code>Online</code> 🟢\n"
             "⏱️ <b>Limits:</b> <code>50/hr</code> | <code>5s cooldown</code>"
         )
-        
+
         keyboard = [
-            [InlineKeyboardButton("📖 Help", callback_data='help'), 
-             InlineKeyboardButton("📈 Status", callback_data='status')],
-            [InlineKeyboardButton("👤 My Stats", callback_data='mystats'),
-             InlineKeyboardButton("🆘 Support", callback_data='support')]
+            [
+                InlineKeyboardButton("📖 Help", callback_data='help'),
+                InlineKeyboardButton("📈 Status", callback_data='status')
+            ],
+            [
+                InlineKeyboardButton("👤 My Stats", callback_data='mystats'),
+                InlineKeyboardButton("🆘 Support", callback_data='support')
+            ]
         ]
 
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
-        
-        try:
-            await context.bot.send_animation(
-                chat_id=chat_id,
-                animation=gif_url,
-                caption=welcome_text,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode='HTML',
-                message_effect_id="5104841245755180586" # 🔥 FIRE Pop-up effect
-            )
-        except Exception as gif_error:
-            logger.warning(f"GIF/Effect failed: {gif_error}")
-            await update.message.reply_text(welcome_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
-            
+
+        await context.bot.send_animation(
+            chat_id=chat_id,
+            animation=gif_url,
+            caption=welcome_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="HTML"
+        )
+
+        # 6️⃣ Final 🔥 Fire Pop-up effect
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="🔥",
+            message_effect_id="5104841245755180586"
+        )
+
     except Exception as e:
         logger.error(f"Start error: {e}")
 
