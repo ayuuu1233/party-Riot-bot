@@ -189,6 +189,7 @@ async def reset_hourly_limits(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Professional Animated Start with Exact Required Sequence"""
     try:
         user_id = update.message.from_user.id
         user_name = update.message.from_user.first_name
@@ -203,30 +204,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
 
         # 2️⃣ 🤗 Pop-up effect
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="🤗 <b>Welcome Boss!</b>",
-            parse_mode="HTML",
+        loader = await update.message.reply_text(
+            "🤗 <b>INITIALIZING...</b>",
+            parse_mode='HTML',
             message_effect_id="5104841245755180586"
         )
-        await asyncio.sleep(1.2)
+        await asyncio.sleep(1.5)
 
-        # 3️⃣ ❤️ Love Pop-up effect
+        # 3️⃣ ❤️ Pop-up effect
         await context.bot.send_message(
             chat_id=chat_id,
-            text="❤️ <b>Initializing Love Protocol...</b>",
-            parse_mode="HTML",
+            text="❤️",
             message_effect_id="5104841245755180586"
         )
-        await asyncio.sleep(1.2)
+        await asyncio.sleep(1)
 
-        # 4️⃣ Text Animation
-        loader = await context.bot.send_message(
-            chat_id=chat_id,
-            text="🌀 <code>Booting AI System...</code>",
-            parse_mode="HTML"
-        )
-
+        # 4️⃣ Text Animation (UNCHANGED LOGIC)
         frames = [
             "📡 <code>Establishing Secure Link... [||---]</code>",
             "🧬 <code>Injecting AI Modules... [||||-]</code>",
@@ -234,19 +227,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
 
         for frame in frames:
+            await loader.edit_text(frame, parse_mode='HTML')
             await asyncio.sleep(0.8)
-            await loader.edit_text(frame, parse_mode="HTML")
 
-        await asyncio.sleep(1)
         await loader.delete()
 
-        # 5️⃣ Final GIF + Caption + Buttons
+        # 5️⃣ GIF + FULL ORIGINAL GREETING + CAPTION + BUTTONS
         welcome_text = (
             f"👑 <b>Greetings, {user_name}!</b>\n\n"
             "✨ <b>『 AI YOUTUBE SUMMARIZER 』</b>\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "🎬 Send any YouTube link\n"
-            "⚡ Get Detailed Hinglish Summary\n"
+            "🎬 <b>System Capabilities:</b>\n"
+            "┠ 🔹 Fast Summary\n"
+            "┠ 🔹 Hinglish Support\n"
+            "┠ 🔹 Smart AI (Gemini 1.5)\n\n"
+            "🚀 <b>How to Use:</b>\n"
+            "➠ Send a YouTube link\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "📊 <b>Status:</b> <code>Online</code> 🟢\n"
             "⏱️ <b>Limits:</b> <code>50/hr</code> | <code>5s cooldown</code>"
@@ -270,10 +266,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             animation=gif_url,
             caption=welcome_text,
             reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="HTML"
+            parse_mode='HTML'
         )
 
-        # 6️⃣ Final 🔥 Fire Pop-up effect
+        # 6️⃣ 🔥 Final Fire Pop-up effect
         await context.bot.send_message(
             chat_id=chat_id,
             text="🔥",
@@ -282,7 +278,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         logger.error(f"Start error: {e}")
-
 
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
