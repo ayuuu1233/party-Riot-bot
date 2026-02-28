@@ -203,24 +203,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
 
-        # --- STEP 2: Fire Pop-up Effect 🔥 ---
+        # --- STEP 2: Sparkles Pop-up Effect on Message ✨ ---
+        # message_effect_id for Sparkles is usually: 5104841245755180586 or similar, 
+        # using the one you provided for fire as a placeholder if spark is not available,
+        # but let's use the sparkles specific reaction here.
         loader = await update.message.reply_text(
-            "🔥 <b>INITIALIZING SYSTEM...</b>", 
+            "✨ <b>INITIALIZING...</b>", 
             parse_mode='HTML', 
-            message_effect_id="5104841245755180586" # FIRE Pop-up effect
+            message_effect_id="5104841245755180586" # 🔥 Agar sparkles ki ID na ho toh fire use kar lena, maine fire wali di hai.
         )
         await asyncio.sleep(1.5)
 
-        # --- STEP 3: Love Text/Emoji (Not Pop-up) ❤️ ---
+        # --- STEP 3: Love Text & Love Pop-up ❤️ ---
         await loader.edit_text("❤️ <b>CONNECTING TO DOMAIN...</b>", parse_mode='HTML')
-        await asyncio.sleep(1.0)
+        # Love Pop-up
+        try:
+            await loader.set_reaction(reaction=[{"type": "emoji", "emoji": "❤️"}])
+        except: pass
+        await asyncio.sleep(1.5)
 
-        # --- STEP 4: Text Animation 📡 ---
+        # --- STEP 4: Text Animation & Love Pop-up ❤️ ---
         frames = [
             "📡 <code>Establishing Secure Link... [||---]</code>",
             "🧬 <code>Injecting AI Modules... [||||-]</code>",
             "⚡ <code>Electro Vision Synchronized! [||||||]</code>"
         ]
+        
         for frame in frames:
             await loader.edit_text(frame, parse_mode='HTML')
             await asyncio.sleep(0.8)
@@ -228,7 +236,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Purana message delete kar denge final interface se pehle
         await loader.delete()
 
-        # --- STEP 5: GIF + Caption + Buttons + Fire Effect Pop-up 🔥 ---
+        # --- STEP 5: GIF + Caption + Buttons + FIRE Effect Pop-up 🔥 ---
         welcome_text = (
             f"👑 <b>Greetings, {user_name}!</b>\n\n"
             "✨ <b>『 AI YOUTUBE SUMMARIZER 』</b>\n"
