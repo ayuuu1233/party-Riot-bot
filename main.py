@@ -195,44 +195,40 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_name = update.message.from_user.first_name
         chat_id = update.effective_chat.id
 
-        # 1️⃣ /start message par 🍀 reaction (different from strawberry)
+        # --- STEP 1: /start msg par Sparkles Reaction ✨ ---
         try:
             await update.message.set_reaction(
-                reaction=[{"type": "emoji", "emoji": "🍀"}]
+                reaction=[{"type": "emoji", "emoji": "✨"}]
             )
         except Exception:
             pass
 
-        # 2️⃣ 🍀 Pop-up effect
+        # --- STEP 2: Fire Pop-up Effect 🔥 ---
         loader = await update.message.reply_text(
-            "🍀 <b>INITIALIZING SYSTEM...</b>",
-            parse_mode='HTML',
-            message_effect_id="5104841245755180586"
+            "🔥 <b>INITIALIZING SYSTEM...</b>", 
+            parse_mode='HTML', 
+            message_effect_id="5104841245755180586" # FIRE Pop-up effect
         )
         await asyncio.sleep(1.5)
 
-        # 3️⃣ ❤️ Love Pop-up effect
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="❤️",
-            message_effect_id="5104841245755180586"
-        )
-        await asyncio.sleep(1)
+        # --- STEP 3: Love Text/Emoji (Not Pop-up) ❤️ ---
+        await loader.edit_text("❤️ <b>CONNECTING TO DOMAIN...</b>", parse_mode='HTML')
+        await asyncio.sleep(1.0)
 
-        # 4️⃣ Text Animation
+        # --- STEP 4: Text Animation 📡 ---
         frames = [
             "📡 <code>Establishing Secure Link... [||---]</code>",
             "🧬 <code>Injecting AI Modules... [||||-]</code>",
             "⚡ <code>Electro Vision Synchronized! [||||||]</code>"
         ]
-
         for frame in frames:
             await loader.edit_text(frame, parse_mode='HTML')
             await asyncio.sleep(0.8)
-
+        
+        # Purana message delete kar denge final interface se pehle
         await loader.delete()
 
-        # 5️⃣ GIF + FULL Greeting + Caption + Buttons
+        # --- STEP 5: GIF + Caption + Buttons + Fire Effect Pop-up 🔥 ---
         welcome_text = (
             f"👑 <b>Greetings, {user_name}!</b>\n\n"
             "✨ <b>『 AI YOUTUBE SUMMARIZER 』</b>\n"
@@ -247,37 +243,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📊 <b>Status:</b> <code>Online</code> 🟢\n"
             "⏱️ <b>Limits:</b> <code>50/hr</code> | <code>5s cooldown</code>"
         )
-
+        
         keyboard = [
-            [
-                InlineKeyboardButton("📖 Help", callback_data='help'),
-                InlineKeyboardButton("📈 Status", callback_data='status')
-            ],
-            [
-                InlineKeyboardButton("👤 My Stats", callback_data='mystats'),
-                InlineKeyboardButton("🆘 Support", callback_data='support')
-            ]
+            [InlineKeyboardButton("📖 Help", callback_data='help'), 
+             InlineKeyboardButton("📈 Status", callback_data='status')],
+            [InlineKeyboardButton("👤 My Stats", callback_data='mystats'),
+             InlineKeyboardButton("🆘 Support", callback_data='support')]
         ]
 
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
-
-        await context.bot.send_animation(
-            chat_id=chat_id,
-            animation=gif_url,
-            caption=welcome_text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode='HTML'
-        )
-
-        # 6️⃣ 🔥 Final FIRE screen pop-up
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="🔥",
-            message_effect_id="5104841245755180586"
-        )
-
+        
+        try:
+            await context.bot.send_animation(
+                chat_id=chat_id,
+                animation=gif_url,
+                caption=welcome_text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='HTML',
+                message_effect_id="5104841245755180586" # 🔥 FIRE Pop-up on final message
+            )
+        except Exception as gif_error:
+            logger.warning(f"GIF/Effect failed: {gif_error}")
+            await update.message.reply_text(welcome_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+            
     except Exception as e:
         logger.error(f"Start error: {e}")
+
 
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
