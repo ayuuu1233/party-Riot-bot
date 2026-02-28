@@ -189,29 +189,29 @@ async def reset_hourly_limits(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Professional Animated Start with Exact Required Sequence"""
+    """Perfect Ordered Cinematic Start"""
     try:
         user_id = update.message.from_user.id
         user_name = update.message.from_user.first_name
         chat_id = update.effective_chat.id
 
-        # 1️⃣ /start message par 🤗 reaction
+        # 1️⃣ /start message par 🍀 reaction (different from strawberry)
         try:
             await update.message.set_reaction(
-                reaction=[{"type": "emoji", "emoji": "🤗"}]
+                reaction=[{"type": "emoji", "emoji": "🍀"}]
             )
         except Exception:
             pass
 
-        # 2️⃣ 🤗 Pop-up effect
+        # 2️⃣ 🍀 Pop-up effect
         loader = await update.message.reply_text(
-            "🤗 <b>INITIALIZING...</b>",
+            "🍀 <b>INITIALIZING SYSTEM...</b>",
             parse_mode='HTML',
             message_effect_id="5104841245755180586"
         )
         await asyncio.sleep(1.5)
 
-        # 3️⃣ ❤️ Pop-up effect
+        # 3️⃣ ❤️ Love Pop-up effect
         await context.bot.send_message(
             chat_id=chat_id,
             text="❤️",
@@ -219,7 +219,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await asyncio.sleep(1)
 
-        # 4️⃣ Text Animation (UNCHANGED LOGIC)
+        # 4️⃣ Text Animation
         frames = [
             "📡 <code>Establishing Secure Link... [||---]</code>",
             "🧬 <code>Injecting AI Modules... [||||-]</code>",
@@ -232,7 +232,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await loader.delete()
 
-        # 5️⃣ GIF + FULL ORIGINAL GREETING + CAPTION + BUTTONS
+        # 5️⃣ GIF + FULL Greeting + Caption + Buttons
         welcome_text = (
             f"👑 <b>Greetings, {user_name}!</b>\n\n"
             "✨ <b>『 AI YOUTUBE SUMMARIZER 』</b>\n"
@@ -269,7 +269,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='HTML'
         )
 
-        # 6️⃣ 🔥 Final Fire Pop-up effect
+        # 6️⃣ 🔥 Final FIRE screen pop-up
         await context.bot.send_message(
             chat_id=chat_id,
             text="🔥",
