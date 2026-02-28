@@ -189,54 +189,53 @@ async def reset_hourly_limits(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Perfect Ordered Cinematic Start"""
+    """Exact Required Sequence - Final Perfect Order"""
     try:
         user_id = update.message.from_user.id
         user_name = update.message.from_user.first_name
         chat_id = update.effective_chat.id
 
-        # --- STEP 1: /start msg par Sparkles Reaction ✨ ---
-        try:
-            await update.message.set_reaction(
-                reaction=[{"type": "emoji", "emoji": "✨"}]
-            )
-        except Exception:
-            pass
-
-        # --- STEP 2: Sparkles Pop-up Effect on Message ✨ ---
-        # message_effect_id for Sparkles is usually: 5104841245755180586 or similar, 
-        # using the one you provided for fire as a placeholder if spark is not available,
-        # but let's use the sparkles specific reaction here.
-        loader = await update.message.reply_text(
-            "✨ <b>INITIALIZING...</b>", 
-            parse_mode='HTML', 
-            message_effect_id="5104841245755180586" # 🔥 Agar sparkles ki ID na ho toh fire use kar lena, maine fire wali di hai.
+        # 1️⃣ Sparkles pop-up on /start
+        await update.message.reply_text(
+            "✨",
+            message_effect_id="5104841245755180586"
         )
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(1)
 
-        # --- STEP 3: Love Text & Love Pop-up ❤️ ---
-        await loader.edit_text("❤️ <b>CONNECTING TO DOMAIN...</b>", parse_mode='HTML')
-        # Love Pop-up
-        try:
-            await loader.set_reaction(reaction=[{"type": "emoji", "emoji": "❤️"}])
-        except: pass
-        await asyncio.sleep(1.5)
+        # 2️⃣ Normal Love Text
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="❤️"
+        )
+        await asyncio.sleep(1)
 
-        # --- STEP 4: Text Animation & Love Pop-up ❤️ ---
+        # 3️⃣ Text Animation
+        loader = await context.bot.send_message(
+            chat_id=chat_id,
+            text="🚀 <code>Booting System...</code>",
+            parse_mode="HTML"
+        )
+
         frames = [
             "📡 <code>Establishing Secure Link... [||---]</code>",
             "🧬 <code>Injecting AI Modules... [||||-]</code>",
             "⚡ <code>Electro Vision Synchronized! [||||||]</code>"
         ]
-        
+
         for frame in frames:
-            await loader.edit_text(frame, parse_mode='HTML')
+            await loader.edit_text(frame, parse_mode="HTML")
             await asyncio.sleep(0.8)
-        
-        # Purana message delete kar denge final interface se pehle
+
+        # ❤️ Love pop-up on animation end
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="❤️",
+            message_effect_id="5104841245755180586"
+        )
+
         await loader.delete()
 
-        # --- STEP 5: GIF + Caption + Buttons + FIRE Effect Pop-up 🔥 ---
+        # 4️⃣ FULL ORIGINAL CAPTION (UNCHANGED)
         welcome_text = (
             f"👑 <b>Greetings, {user_name}!</b>\n\n"
             "✨ <b>『 AI YOUTUBE SUMMARIZER 』</b>\n"
@@ -251,29 +250,37 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📊 <b>Status:</b> <code>Online</code> 🟢\n"
             "⏱️ <b>Limits:</b> <code>50/hr</code> | <code>5s cooldown</code>"
         )
-        
+
         keyboard = [
-            [InlineKeyboardButton("📖 Help", callback_data='help'), 
-             InlineKeyboardButton("📈 Status", callback_data='status')],
-            [InlineKeyboardButton("👤 My Stats", callback_data='mystats'),
-             InlineKeyboardButton("🆘 Support", callback_data='support')]
+            [
+                InlineKeyboardButton("📖 Help", callback_data='help'),
+                InlineKeyboardButton("📈 Status", callback_data='status')
+            ],
+            [
+                InlineKeyboardButton("👤 My Stats", callback_data='mystats'),
+                InlineKeyboardButton("🆘 Support", callback_data='support')
+            ]
         ]
 
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
-        
-        try:
-            await context.bot.send_animation(
-                chat_id=chat_id,
-                animation=gif_url,
-                caption=welcome_text,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode='HTML',
-                message_effect_id="5104841245755180586" # 🔥 FIRE Pop-up on final message
-            )
-        except Exception as gif_error:
-            logger.warning(f"GIF/Effect failed: {gif_error}")
-            await update.message.reply_text(welcome_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
-            
+
+        # 4️⃣ GIF + caption + buttons
+        gif_message = await context.bot.send_animation(
+            chat_id=chat_id,
+            animation=gif_url,
+            caption=welcome_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="HTML"
+        )
+
+        # 5️⃣ 🔥 Fire pop-up on SAME GIF message
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="🔥",
+            message_effect_id="5104841245755180586",
+            reply_to_message_id=gif_message.message_id
+        )
+
     except Exception as e:
         logger.error(f"Start error: {e}")
 
