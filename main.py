@@ -171,13 +171,13 @@ async def reset_hourly_limits(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Professional Animated Start with exact Sequence"""
+    """Animated Start with Revised Sequence"""
     try:
         user_id = update.message.from_user.id
         user_name = update.message.from_user.first_name
         chat_id = update.effective_chat.id
 
-        # --- STEP 1: /start wale msg par Strawberry Reaction ---
+        # --- STEP 1: /start msg par Strawberry Reaction ---
         try:
             await update.message.set_reaction(
                 reaction=[{"type": "emoji", "emoji": "🍓"}]
@@ -191,9 +191,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='HTML', 
             message_effect_id="5159385139981059251" # Strawberry Pop effect
         )
-        await asyncio.sleep(1.5) # Pop-up dikhne ka time
+        await asyncio.sleep(1.5)
 
-        # --- STEP 3: Love Emoji (Not Pop-up, just text) ---
+        # --- STEP 3: Love Text (Not Pop-up) ---
         await loader.edit_text("❤️ <b>CONNECTING TO DOMAIN...</b>", parse_mode='HTML')
         await asyncio.sleep(1.0)
 
@@ -207,10 +207,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await loader.edit_text(frame, parse_mode='HTML')
             await asyncio.sleep(0.8)
         
-        # Purana message delete kar denge final interface se pehle
         await loader.delete()
 
-        # --- STEP 5: GIF + Caption + Buttons + Love Effect Pop-up ---
+        # --- STEP 5: Final GIF + Fire Effect ---
         welcome_text = (
             f"👑 <b>Greetings, {user_name}!</b>\n\n"
             "✨ <b>『 AI YOUTUBE SUMMARIZER 』</b>\n"
@@ -242,7 +241,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 caption=welcome_text,
                 reply_markup=InlineKeyboardMarkup(keyboard),
                 parse_mode='HTML',
-                message_effect_id="5104841245755180586" # 🔥 LOVE HEART Pop-up effect
+                message_effect_id="5104841245755180586" # 🔥 FIRE Pop-up effect
             )
         except Exception as gif_error:
             logger.warning(f"GIF/Effect failed: {gif_error}")
