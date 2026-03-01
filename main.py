@@ -189,53 +189,69 @@ async def reset_hourly_limits(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Exact Required Sequence - Final Perfect Order"""
     try:
-        user_id = update.message.from_user.id
         user_name = update.message.from_user.first_name
         chat_id = update.effective_chat.id
+        start_msg_id = update.message.message_id
 
-        # 1️⃣ Sparkles pop-up on /start
-        await update.message.reply_text(
-            "✨",
-            message_effect_id="5104841245755180586"
-        )
-        await asyncio.sleep(1)
-
-        # 2️⃣ Normal Love Text
+        # 🌟 1️⃣ Sparkle effect EXACT on /start message
         await context.bot.send_message(
+            chat_id=chat_id,
+            text="✨",
+            message_effect_id="5104841245755180586",
+            reply_to_message_id=start_msg_id
+        )
+
+        await asyncio.sleep(0.8)
+
+        # ❤️ 2️⃣ Normal love text (clean entry)
+        love_msg = await context.bot.send_message(
             chat_id=chat_id,
             text="❤️"
         )
-        await asyncio.sleep(1)
 
-        # 3️⃣ Text Animation
+        await asyncio.sleep(0.8)
+
+        # 🚀 3️⃣ Cinematic Typing Loader
         loader = await context.bot.send_message(
             chat_id=chat_id,
-            text="🚀 <code>Booting System...</code>",
+            text="🚀 <code>Booting System</code>",
             parse_mode="HTML"
         )
 
+        typing_frames = [
+            "🚀 <code>Booting System.</code>",
+            "🚀 <code>Booting System..</code>",
+            "🚀 <code>Booting System...</code>",
+        ]
+
+        for frame in typing_frames:
+            await loader.edit_text(frame, parse_mode="HTML")
+            await asyncio.sleep(0.5)
+
+        # 🔄 System frames
         frames = [
-            "📡 <code>Establishing Secure Link... [||---]</code>",
-            "🧬 <code>Injecting AI Modules... [||||-]</code>",
-            "⚡ <code>Electro Vision Synchronized! [||||||]</code>"
+            "📡 <code>Establishing Secure Link</code>",
+            "🧬 <code>Injecting AI Modules</code>",
+            "⚡ <code>Electro Vision Synchronized</code>"
         ]
 
         for frame in frames:
-            await loader.edit_text(frame, parse_mode="HTML")
+            await loader.edit_text(frame + " ⚙️", parse_mode="HTML")
             await asyncio.sleep(0.8)
 
-        # ❤️ Love pop-up on animation end
+        # ❤️ Final animation pop effect (single clean impact)
         await context.bot.send_message(
             chat_id=chat_id,
             text="❤️",
-            message_effect_id="5104841245755180586"
+            message_effect_id="5104841245755180586",
+            reply_to_message_id=loader.message_id
         )
 
+        await asyncio.sleep(0.6)
         await loader.delete()
 
-        # 4️⃣ FULL ORIGINAL CAPTION (UNCHANGED)
+        # 🎬 4️⃣ Welcome Caption
         welcome_text = (
             f"👑 <b>Greetings, {user_name}!</b>\n\n"
             "✨ <b>『 AI YOUTUBE SUMMARIZER 』</b>\n"
@@ -264,7 +280,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
 
-        # 4️⃣ GIF + caption + buttons
         gif_message = await context.bot.send_animation(
             chat_id=chat_id,
             animation=gif_url,
@@ -273,7 +288,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="HTML"
         )
 
-        # 5️⃣ 🔥 Fire pop-up on SAME GIF message
+        await asyncio.sleep(0.7)
+
+        # 🔥 5️⃣ Fire pop-up EXACT on GIF caption
         await context.bot.send_message(
             chat_id=chat_id,
             text="🔥",
