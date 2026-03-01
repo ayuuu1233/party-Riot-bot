@@ -4,3 +4,4 @@ google-generativeai
 flask
 yt-dlp>=2024.12.06
 werkzeug
+aiohttp==3.9.5
