@@ -13,6 +13,7 @@ from telegram.ext import (
 from youtube_transcript_api import YouTubeTranscriptApi
 import google.generativeai as genai
 import yt_dlp
+import aiohttp
 from keep_alive import keep_alive
 
 # ================== 1. SETUP & CONFIG ==================
@@ -40,45 +41,89 @@ model = genai.GenerativeModel('gemini-1.5-flash')
 # Ye function metadata (Title/Description) nikalne ke liye
 async def get_video_info_fallback(video_url):
     """
-    Metadata fail hone par Gemini se directly summary nikalne wala logic.
-   
+    Ultimate YouTube summarizer logic
+    Works even if metadata or captions missing
     """
+
     try:
-        # --- PHASE 1: Try Metadata Extraction (Faster) ---
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
-            'format': 'best',
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'skip_download': True,
+            'writesubtitles': True,
+            'writeautomaticsub': True,
+            'subtitlesformat': 'vtt',
+            'subtitleslangs': ['en'],
         }
-        
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
-            title = info.get('title', 'Unknown Title')
-            description = info.get('description', 'No Description')
-            
-            # Agar metadata mil gaya toh summary generate karo
-            return await generate_summary_with_ai(title, description)
+
+            title = info.get('title')
+            description = info.get('description')
+            subtitles = info.get('subtitles')
+            auto_captions = info.get('automatic_captions')
+
+            # 1️⃣ If subtitles available
+            transcript_text = ""
+
+            if subtitles and 'en' in subtitles:
+                subtitle_url = subtitles['en'][0]['url']
+                transcript_text = await fetch_subtitle_text(subtitle_url)
+
+            elif auto_captions and 'en' in auto_captions:
+                subtitle_url = auto_captions['en'][0]['url']
+                transcript_text = await fetch_subtitle_text(subtitle_url)
+
+            # 2️⃣ If transcript exists → best summary
+            if transcript_text:
+                return await generate_summary_with_ai(
+                    f"{title}\n\nTranscript:\n{transcript_text}"
+                )
+
+            # 3️⃣ If only metadata exists
+            if title or description:
+                return await generate_summary_with_ai(
+                    f"Title: {title}\nDescription: {description}"
+                )
+
+            # 4️⃣ Final fallback → AI intelligent guess
+            return await generate_summary_with_ai(
+                f"Analyze this YouTube video topic from link and generate an intelligent Hinglish summary:\n{video_url}"
+            )
 
     except Exception as e:
-        logger.error(f"Metadata fail: {e}")
-        
-        # --- PHASE 2: Fallback (Bina captions/metadata ke) ---
-        # Gemini ko directly link bhejkar analyze karwao
-        try:
-            prompt = f"Analyze this YouTube video link and provide a detailed Hinglish summary: {video_url}"
-            response = model.generate_content(prompt)
-            return response.text
-        except Exception as ai_error:
-            logger.error(f"AI Fallback fail: {ai_error}")
-            return "❌ Video summarize nahi ho paya. Link check karo."
+        logger.error(f"Ultimate summary fail: {e}")
+        return "❌ Video summarize nahi ho paya. Link check karo."
 
-async def generate_summary_with_ai(title, description):
-    """Gemini AI prompt for summarization"""
-    prompt = f"Title: {title}\nDescription: {description}\n\nSummarize this in Hinglish."
+
+
+async def fetch_subtitle_text(url):
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                text = await response.text()
+                return text
+    except:
+        return ""
+
+async def generate_summary_with_ai(content):
+    prompt = f"""
+You are an advanced YouTube video analyzer.
+
+Content:
+{content}
+
+Generate:
+- Detailed Hinglish Summary
+- Key Points
+- Main Takeaway
+
+Keep it clean and structured.
+"""
+
     response = model.generate_content(prompt)
     return response.text
-
 
 # ================== 2. DATA MANAGEMENT ==================
 # User tracking
