@@ -234,69 +234,70 @@ async def reset_hourly_limits(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== 4. COMMAND HANDLERS ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Crazy Cinematic Sequence - No Logic Changed"""
     try:
         user_name = update.message.from_user.first_name
         chat_id = update.effective_chat.id
         start_msg_id = update.message.message_id
 
-        # 🌟 1️⃣ Sparkle effect EXACT on /start message
+        # 🌟 1️⃣ /start dabate hi Sparkle Pop-up (Directly on start message)
         await context.bot.send_message(
             chat_id=chat_id,
-            text="✨",
-            message_effect_id="5104841245755180586",
+            text="✨ <b>SYSTEM BREACHED!</b>",
+            parse_mode="HTML",
+            message_effect_id="5159385139981059251", # Sparkles Effect
             reply_to_message_id=start_msg_id
         )
+        # Reaction bhi add kar diya thoda extra crazy feel ke liye
+        try: await update.message.set_reaction(reaction=[{"type": "emoji", "emoji": "👾"}])
+        except: pass
 
-        await asyncio.sleep(0.8)
+        await asyncio.sleep(1.0)
 
-        # ❤️ 2️⃣ Normal love text (clean entry)
+        # ❤️ 2️⃣ Normal love text (The calm before the storm)
         love_msg = await context.bot.send_message(
             chat_id=chat_id,
-            text="❤️"
+            text="❤️ <b>Syncing Reality...</b>",
+            parse_mode="HTML"
         )
-
         await asyncio.sleep(0.8)
 
         # 🚀 3️⃣ Cinematic Typing Loader
         loader = await context.bot.send_message(
             chat_id=chat_id,
-            text="🚀 <code>Booting System</code>",
+            text="🚀 <code>Booting Void OS...</code>",
             parse_mode="HTML"
         )
 
-        typing_frames = [
-            "🚀 <code>Booting System.</code>",
-            "🚀 <code>Booting System..</code>",
-            "🚀 <code>Booting System...</code>",
-        ]
-
+        typing_frames = ["🚀 <code>.</code>", "🚀 <code>..</code>", "🚀 <code>...</code>"]
         for frame in typing_frames:
-            await loader.edit_text(frame, parse_mode="HTML")
-            await asyncio.sleep(0.5)
+            await loader.edit_text(f"🚀 <code>Booting System{frame}</code>", parse_mode="HTML")
+            await asyncio.sleep(0.4)
 
-        # 🔄 System frames
+        # 🔄 System Frames Animation
         frames = [
             "📡 <code>Establishing Secure Link</code>",
             "🧬 <code>Injecting AI Modules</code>",
             "⚡ <code>Electro Vision Synchronized</code>"
         ]
-
         for frame in frames:
             await loader.edit_text(frame + " ⚙️", parse_mode="HTML")
             await asyncio.sleep(0.8)
 
-        # ❤️ Final animation pop effect (single clean impact)
+        # ❤️ Love Pop-up Effect (Impact exactly on loader)
         await context.bot.send_message(
             chat_id=chat_id,
-            text="❤️",
-            message_effect_id="5104841245755180586",
+            text="❤️ <b>DOMAIN EXPANSION!</b>",
+            parse_mode="HTML",
+            message_effect_id="5104841245755180586", # Love Pop Effect
             reply_to_message_id=loader.message_id
         )
 
-        await asyncio.sleep(0.6)
+        await asyncio.sleep(1.2)
         await loader.delete()
+        await love_msg.delete() # Screen saaf karne ke liye
 
-        # 🎬 4️⃣ Welcome Caption
+        # 🎬 4️⃣ Final GIF + Welcome Interface
         welcome_text = (
             f"👑 <b>Greetings, {user_name}!</b>\n\n"
             "✨ <b>『 AI YOUTUBE SUMMARIZER 』</b>\n"
@@ -309,18 +310,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "➠ Send a YouTube link\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "📊 <b>Status:</b> <code>Online</code> 🟢\n"
-            "⏱️ <b>Limits:</b> <code>50/hr</code> | <code>5s cooldown</code>"
+            "⏱️ <b>Limits:</b> <code>Unlimited Power</code> ♾️"
         )
 
         keyboard = [
-            [
-                InlineKeyboardButton("📖 Help", callback_data='help'),
-                InlineKeyboardButton("📈 Status", callback_data='status')
-            ],
-            [
-                InlineKeyboardButton("👤 My Stats", callback_data='mystats'),
-                InlineKeyboardButton("🆘 Support", callback_data='support')
-            ]
+            [InlineKeyboardButton("📖 Help", callback_data='help'), InlineKeyboardButton("📈 Status", callback_data='status')],
+            [InlineKeyboardButton("👤 My Stats", callback_data='mystats'), InlineKeyboardButton("🆘 Support", callback_data='support')]
         ]
 
         gif_url = "https://raw.githubusercontent.com/ayuuu1233/yt-summarizer-bot/main/gojo.gif"
@@ -333,13 +328,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="HTML"
         )
 
-        await asyncio.sleep(0.7)
+        await asyncio.sleep(0.5)
 
-        # 🔥 5️⃣ Fire pop-up EXACT on GIF caption
+        # 🔥 5️⃣ Fire pop-up EXACT on GIF message
         await context.bot.send_message(
             chat_id=chat_id,
-            text="🔥",
-            message_effect_id="5104841245755180586",
+            text="🔥 <b>SYSTEM READY!</b>",
+            parse_mode="HTML",
+            message_effect_id="5104841245755180586", # Fire Effect
             reply_to_message_id=gif_message.message_id
         )
 
