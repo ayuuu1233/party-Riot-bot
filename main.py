@@ -539,25 +539,37 @@ async def mystats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(mystats_text, parse_mode='Markdown')
 
 async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Server latency check with animation"""
     import time
+
+    image_url = "https://files.catbox.moe/7jvh55.jpg"
+
     start_time = time.time()
-    
-    # Initial ping message
-    ping_msg = await update.message.reply_text("🛰️ *Pinging Server...*", parse_mode='Markdown')
-    
+
+    # send sticker
+    await update.message.reply_sticker(
+        "CAACAgQAAxkBAAOxZydY5130mqDr6GKX6kucio9IHRQAAlgRAAKLAdBR7L2HepOERFIeBA"
+    )
+
+    # temporary message
+    msg = await update.message.reply_text("⏳ kawaii is calculating...")
+
     end_time = time.time()
-    latency = round((end_time - start_time) * 1000, 2)
-    
-    # Upgrade to animated response
-    await ping_msg.edit_text(
-        "🏓 *Pong!* 🏓\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"⚡ *Latency:* `{latency} ms`\n"
-        "🟢 *Status:* `System Healthy`\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "Server bilkul smoothly chal raha hai! ✅",
-        parse_mode='Markdown'
+    elapsed_time = round((end_time - start_time) * 1000, 3)
+
+    # delete loading message
+    await msg.delete()
+
+    # send final ping result
+    await context.bot.send_photo(
+        chat_id=update.effective_chat.id,
+        photo=image_url,
+        caption=(
+            f"🌸 @{context.bot.username} ᴘσηɢ!\n\n"
+            f"⏱️ ʟᴀᴛᴇɴᴄʏ: {elapsed_time} ms\n\n"
+            f"✨ ғᴀsᴛ ᴀs ᴇᴠᴇʀ, ᴊᴜsᴛ ғᴏʀ ʏᴏᴜ, "
+            f"{update.effective_user.mention_html()} 💖"
+        ),
+        parse_mode="HTML"
     )
 
 
