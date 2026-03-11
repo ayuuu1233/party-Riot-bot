@@ -15,6 +15,8 @@ import google.generativeai as genai
 import yt_dlp
 import aiohttp
 from keep_alive import keep_alive
+import time
+BOT_START_TIME = time.time()
 
 # ================== 1. SETUP & CONFIG ==================
 logging.basicConfig(
@@ -572,7 +574,34 @@ async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
+async def alive_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    import time
+    from datetime import timedelta
 
+    # Video URL
+    video_url = "https://files.catbox.moe/nywp1r.mp4"
+
+    # Calculate uptime
+    uptime_seconds = time.time() - BOT_START_TIME
+    uptime = str(timedelta(seconds=int(uptime_seconds)))
+
+    alive_message = (
+        f"👋 ʜєʟʟσ sєηᴘᴧɪ! I'ᴍ @{context.bot.username} 🌸\n\n"
+        "❄️ sᴛᴧᴛᴜs: ғᴜʟʟʏ σᴘєʀᴧᴛɪσηᴧʟ\n"
+        f"🌋 ᴜᴘᴛɪᴍє: {uptime}\n"
+        f"🥂 ʙσᴛ ɴᴧᴍє: @{context.bot.username}\n"
+        "📊 ᴠєʀsɪση: 1.0.0\n\n"
+        f"ᴛʜᴧηᴋs ғσʀ ᴋєєᴘɪηɢ ᴍє ᴧʟɪᴠє, "
+        f"{update.effective_user.mention_html()} 😊💕"
+    )
+
+    await context.bot.send_video(
+        chat_id=update.effective_chat.id,
+        video=video_url,
+        caption=alive_message,
+        parse_mode="HTML"
+    )
+    
 # ================== 5. MESSAGE HANDLER ==================
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Upgraded Message Handler with Animations and Progress Bars"""
@@ -760,6 +789,7 @@ def main():
         app.add_handler(CommandHandler("support", support_command)) 
         app.add_handler(CommandHandler("mystats", mystats_command))
         app.add_handler(CommandHandler("ping", ping_command))
+        app.add_handler(CommandHandler("alive", alive_command)) 
         app.add_handler(CommandHandler("admin_stats", admin_stats))
         app.add_handler(CallbackQueryHandler(button_callback))
         app.add_handler(conv_handler)
