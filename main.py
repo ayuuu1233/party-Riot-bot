@@ -227,7 +227,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
              InlineKeyboardButton("📖 Help", callback_data='help')]
         ]
 
-        video_url = "https://files.catbox.moe/dlg0rb.mp4"
+        video_url = "https://files.catbox.moe/qkeqgs.mp4"
         try:
             await context.bot.send_video(chat_id=chat_id, video=video_url, caption=welcome_text,
                                          reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
