@@ -1,7 +1,7 @@
 """
-main.py — Party Riot Bot V2
-Contains: Setup, utils, start, message handler, callbacks, owner commands, bot runner
-All game commands are imported from games.py
+main.py — Party Riot Bot
+Setup, utils, start, message handler, callbacks, owner commands, runner
+Game commands imported from games.py
 """
 
 import os
@@ -11,7 +11,6 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timedelta
-from collections import defaultdict
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -21,11 +20,8 @@ from telegram.ext import (
 import google.generativeai as genai
 from keep_alive import keep_alive
 
-# ================== SETUP & CONFIG ==================
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+# ================== SETUP ==================
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 BOT_START_TIME = time.time()
@@ -41,7 +37,7 @@ OWNER_ID = int(OWNER_ID_STR)
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# ================== DATA FILES ==================
+# ================== FILE PATHS ==================
 STATS_FILE = "party_stats.json"
 CONFESS_FILE = "confessions.json"
 LEADERBOARD_FILE = "leaderboard.json"
@@ -49,11 +45,10 @@ BANNED_FILE = "banned.json"
 CHAT_HISTORY_FILE = "chat_history.json"
 MOOD_FILE = "user_moods.json"
 STREAKS_FILE = "streaks.json"
-POLLS_FILE = "active_polls.json"
 WARNINGS_FILE = "warnings.json"
-CUSTOM_CMDS_FILE = "custom_commands.json"
+POLLS_FILE = "active_polls.json"
 
-# ================== UTILITY FUNCTIONS ==================
+# ================== UTILS ==================
 def load_json(filepath, default):
     if os.path.exists(filepath):
         try:
@@ -74,21 +69,17 @@ def is_owner(user_id):
     return user_id == OWNER_ID
 
 def is_banned(user_id):
-    banned = load_json(BANNED_FILE, [])
-    return user_id in banned
+    return user_id in load_json(BANNED_FILE, [])
 
 async def owner_only(update: Update):
     if not is_owner(update.effective_user.id):
-        await update.message.reply_text(
-            "🚫 *Tu owner nahi hai bhai!*\nYe command sirf malik ke liye hai 👑",
-            parse_mode='Markdown'
-        )
+        await update.message.reply_text("🚫 *Tu owner nahi hai! Ye command sirf malik ke liye hai 👑*", parse_mode='Markdown')
         return False
     return True
 
 async def check_banned(update: Update):
     if is_banned(update.effective_user.id):
-        await update.message.reply_text("🔨 Tu banned hai bhai. Owner se baat kar.")
+        await update.message.reply_text("🔨 Tu banned hai. Owner se baat kar.")
         return True
     return False
 
@@ -113,12 +104,10 @@ def get_leaderboard_text():
         return "📊 Abhi koi data nahi! Khelo aur points kamao!"
     sorted_lb = sorted(lb.items(), key=lambda x: x[1]["points"], reverse=True)
     medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
-    text = "👑 *PARTY RIOT V2 LEADERBOARD* 👑\n━━━━━━━━━━━━━━━━━\n"
+    text = "👑 *PARTY RIOT BOT LEADERBOARD* 👑\n━━━━━━━━━━━━━━━━━\n"
     for i, (uid, data) in enumerate(sorted_lb[:10]):
         medal = medals[i] if i < len(medals) else f"{i+1}."
-        dares = data.get('dares_done', 0)
-        trivia = data.get('trivia_correct', 0)
-        text += f"{medal} *{data['name']}* — `{data['points']} pts` | 😈{dares} dares | 🧠{trivia} trivia\n"
+        text += f"{medal} *{data['name']}* — `{data['points']} pts` | 😈{data.get('dares_done',0)} dares | 🧠{data.get('trivia_correct',0)} trivia\n"
     return text
 
 def update_streak(user_id, user_name):
@@ -130,8 +119,7 @@ def update_streak(user_id, user_name):
     else:
         last = streaks[uid].get("last_date", "")
         try:
-            last_date = datetime.fromisoformat(last).date()
-            diff = (datetime.now().date() - last_date).days
+            diff = (datetime.now().date() - datetime.fromisoformat(last).date()).days
             if diff == 1:
                 streaks[uid]["streak"] += 1
                 streaks[uid]["max_streak"] = max(streaks[uid].get("max_streak", 0), streaks[uid]["streak"])
@@ -154,20 +142,20 @@ def warn_user(user_id, user_name, reason):
     save_json(WARNINGS_FILE, warnings)
     return warnings[uid]["count"]
 
-# ================== BOT PERSONALITY REPLIES ==================
+# ================== PERSONALITY REPLIES ==================
 BOT_PERSONALITY_REPLIES = {
-    "hello": ["Heyy! 🌸 Kya scene hai aaj?", "Ayo! Party mode mein hoon! 🎉", "Namaste bhai! 😂 Kya ho raha hai?"],
+    "hello": ["Heyy! 🌸 Kya scene hai aaj?", "Ayo! Party mode mein hoon! 🎉", "Namaste! 😂 Kya ho raha hai?"],
     "hi": ["Hi hi hi! 👋 Kya haal hai?", "Heyyyy 🙌 Bot zinda hai!"],
-    "how are you": ["Main toh full mast hoon! 🔥 Tu bata?", "Bilkul fresh! Thoda nap liya tha 😂", "Zabardast! Aaj kisi ko roast karein? 😈"],
-    "thanks": ["Arre yaar mention not! 🙏", "Koi baat nahi bestie 💕", "Tere liye kuch bhi! 😂"],
-    "good morning": ["Good morning! ☀️ Chai pi li? Warna neend nahi jayegi raat ko 😂", "Subah subah itni energy? Respect! 🌅"],
-    "good night": ["Good night! 🌙 Sapne mein crush aaye 😏", "So ja jaldi, kal aur roast karenge 😂 Shubh raatri! 🌟"],
-    "love you": ["Awww! 😳 Main toh bot hoon par dil touch ho gaya! 💕", "Aye aye 🫣 Bot ko pyaar? Cute hai!"],
-    "bored": ["Bored hai? /truth khelo ya /dare le! 😈", "Chal /wyr khel, kuch toh tike ga! 🤔", "Teri boredom ka ilaaj mere paas hai — /roast? 😂"],
-    "sad": ["Aye yaar 😢 Kya hua? Bata na! Main sun raha hoon 🤍", "Sad mat ho! Party mein aao, sab bhool jaoge 🎉"],
+    "how are you": ["Main toh full mast hoon! 🔥 Tu bata?", "Bilkul fresh! Thoda nap liya tha 😂"],
+    "thanks": ["Arre yaar mention not! 🙏", "Koi baat nahi 💕", "Tere liye kuch bhi! 😂"],
+    "good morning": ["Good morning! ☀️ Chai pi li?", "Subah subah itni energy? Respect! 🌅"],
+    "good night": ["Good night! 🌙 Sapne mein crush aaye 😏", "So ja jaldi! 🌟"],
+    "love you": ["Awww! 😳 Dil touch ho gaya! 💕", "Bot ko pyaar? Cute hai! 🫣"],
+    "bored": ["Bored hai? /truth ya /dare khelo! 😈", "Chal /wyr khel! 🤔"],
+    "sad": ["Aye yaar 😢 Kya hua? Main sun raha/rahi hoon 🤍", "Sad mat ho! Sab saath hain 🎉"],
 }
 
-# ================== START COMMAND ==================
+# ================== START ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         if await check_banned(update): return
@@ -181,17 +169,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         msg1 = await context.bot.send_message(chat_id=chat_id, text="🌸 *Waking up the party spirits...*", parse_mode='Markdown')
         await asyncio.sleep(0.8)
-        loader = await context.bot.send_message(chat_id=chat_id, text="🎉 `Loading V2...`", parse_mode='Markdown')
-        frames = [
-            "🎊 `Party Mode V2: Activating...`",
-            "🤖 `AI Brain: Connecting...`",
-            "💘 `Couple Matcher: Online...`",
-            "😈 `Roast Engine: Charging...`",
-            "🧠 `Trivia Bank: Loading...`",
-            "🔮 `Fortune Teller: Awakening...`",
-            "🎉 `SYSTEM V2 READY!`"
-        ]
-        for frame in frames:
+        loader = await context.bot.send_message(chat_id=chat_id, text="🎉 `Loading...`", parse_mode='Markdown')
+        for frame in ["🎊 `Party Mode: Activating...`", "🤖 `AI Brain: Connecting...`", "💘 `Couple Matcher: Online...`",
+                      "😈 `Roast Engine: Charging...`", "🧠 `Trivia Bank: Loading...`", "🎉 `SYSTEM READY!`"]:
             await loader.edit_text(frame, parse_mode='Markdown')
             await asyncio.sleep(0.5)
 
@@ -199,9 +179,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await loader.delete()
 
         welcome_text = (
-            f"🌸 *Heyy {user_name}-senpai!* Welcome to the chaos V2! 🎉\n\n"
+            f"🌸 *Heyy {user_name}!* Welcome to the chaos! 🎉\n\n"
             "╔══════════════════════════╗\n"
-            "║  🎊 *PARTY RIOT BOT V2* 🎊  ║\n"
+            "║    🎊 *PARTY RIOT BOT* 🎊    ║\n"
             "╚══════════════════════════╝\n\n"
             "🎮 *Game Commands:*\n"
             "┠ 🔴 /truth — Spicy sawaal!\n"
@@ -214,26 +194,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "┠ ⚡ /shipname — Ship banao!\n"
             "┠ 🎭 /rate @user — Rate karo!\n"
             "┠ 🃏 /nhie — Never Have I Ever\n"
-            "┠ 🧠 /trivia — Test your knowledge!\n\n"
-            "✨ *NEW V2 Commands:*\n"
+            "┠ 🧠 /trivia — Quiz time!\n\n"
+            "✨ *More Commands:*\n"
             "┠ 🔮 /fortune — Aaj ka bhavishya!\n"
-            "┠ 🎱 /8ball [question] — Magic 8 Ball!\n"
+            "┠ 🎱 /8ball [question] — Magic Ball!\n"
             "┠ ♈ /zodiac [sign] — Rashifal!\n"
-            "┠ 💬 /compliment @user — Tarif karo!\n"
-            "┠ 🎭 /mood — Apna mood set karo!\n"
+            "┠ 💬 /compliment @user — Tarif!\n"
+            "┠ 🎭 /mood — Mood set karo!\n"
             "┠ 📊 /poll [question] — Group poll!\n"
-            "┠ 🔥 /streak — Daily streak check!\n"
+            "┠ 🔥 /streak — Daily streak!\n"
             "┠ 🤖 /ask [question] — AI se pooch!\n"
             "┠ 🎲 /rng [max] — Random number!\n"
             "┠ ⚔️ /battle @user — Epic battle!\n"
-            "┠ 💰 /economy — Check balance!\n"
+            "┠ 💰 /economy — Points check!\n"
             "┠ 🌍 /fact — Random cool fact!\n\n"
             "📊 *Info:*\n"
             "┠ 🏆 /leaderboard | 📈 /stats\n"
             "┠ ⚡ /ping | 💫 /alive | 📖 /help\n\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "🤖 _Main ab messages pe bhi react karta hoon!_\n"
-            "📊 *Status:* `Online & Upgraded` 🟢"
+            "🤖 _Messages pe bhi reply karta hoon!_\n"
+            "📊 *Status:* `Online & Ready` 🟢"
         )
 
         keyboard = [
@@ -249,66 +229,86 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         video_url = "https://files.catbox.moe/dlg0rb.mp4"
         try:
-            await context.bot.send_video(
-                chat_id=chat_id, video=video_url, caption=welcome_text,
-                reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown'
-            )
+            await context.bot.send_video(chat_id=chat_id, video=video_url, caption=welcome_text,
+                                         reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
         except:
-            await context.bot.send_message(
-                chat_id=chat_id, text=welcome_text,
-                reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown'
-            )
+            await context.bot.send_message(chat_id=chat_id, text=welcome_text,
+                                           reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
     except Exception as e:
         logger.error(f"Start error: {e}")
 
 
-# ================== MESSAGE HANDLER (AI) ==================
+# ================== MESSAGE HANDLER ==================
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
     if await check_banned(update): return
 
     msg = update.message.text.lower().strip()
-    user_name = update.effective_user.first_name
-    bot_username = context.bot.username.lower() if context.bot.username else ""
+    user = update.effective_user
+    bot_username = (context.bot.username or "").lower()
 
     is_private = update.effective_chat.type == "private"
     is_mentioned = f"@{bot_username}" in msg or "party riot" in msg
-    is_reply_to_bot = (
-        update.message.reply_to_message and
-        update.message.reply_to_message.from_user and
-        update.message.reply_to_message.from_user.is_bot
-    )
+    is_reply_to_bot = (update.message.reply_to_message and
+                       update.message.reply_to_message.from_user and
+                       update.message.reply_to_message.from_user.is_bot)
 
-    # Keyword quick replies
+    # Mood tag detection: someone tagged a user who has a mood set
+    # If message mentions @someone in a group, check if that someone has a mood
+    if update.message.entities:
+        from games import MOOD_RESPONSES
+        moods = load_json(MOOD_FILE, {})
+        for entity in update.message.entities:
+            if entity.type == "mention":
+                mention_text = update.message.text[entity.offset:entity.offset + entity.length]
+                # Check if any user in moods has this username
+                for uid, data in moods.items():
+                    if data.get("name", "").lower() in mention_text.lower():
+                        mood_text = data.get("mood", "").lower()
+                        # Find matching mood key
+                        response = None
+                        for key, replies in MOOD_RESPONSES.items():
+                            if key in mood_text:
+                                response = random.choice(replies)
+                                break
+                        if not response:
+                            response = f"_{data['name']} ka mood hai: {data.get('mood', '?')}_ 🎭"
+                        await asyncio.sleep(0.5)
+                        await update.message.reply_text(
+                            f"🎭 *{data['name']} ka mood alert!*\n\n{response}",
+                            parse_mode='Markdown'
+                        )
+                        return
+
+    # Keyword quick replies (groups too)
     for keyword, replies in BOT_PERSONALITY_REPLIES.items():
         if keyword in msg:
             await asyncio.sleep(0.5)
             await update.message.reply_text(random.choice(replies))
             return
 
-    # AI reply for private/mention/reply
+    # AI reply for private / mention / reply
     if is_private or is_mentioned or is_reply_to_bot:
         clean_msg = msg.replace(f"@{bot_username}", "").strip()
         if not clean_msg or len(clean_msg) < 2:
             return
         try:
-            typing_msg = await update.message.reply_text("🤖 _Soch raha hoon..._", parse_mode='Markdown')
+            typing_msg = await update.message.reply_text("🤖 _Soch raha/rahi hoon..._", parse_mode='Markdown')
             history_data = load_json(CHAT_HISTORY_FILE, {})
-            uid = str(update.effective_user.id)
-            user_history = history_data.get(uid, [])[-6:]
-            history_text = "".join([f"User: {h['user']}\nBot: {h['bot']}\n" for h in user_history])
-            prompt = f"""Tu ek fun, desi party bot hai jiska naam "Party Riot Bot V2" hai.
-Tu Hinglish mein baat karta hai (Hindi + English mix).
-Teri personality: funny, sarcastic but caring, energetic, emojis use karta hai, desi references deta hai.
-Tu kabhi boring nahi hota. Short responses (2-4 lines max).
+            uid = str(user.id)
+            history_text = "".join([f"User: {h['user']}\nBot: {h['bot']}\n" for h in history_data.get(uid, [])[-6:]])
 
-Previous conversation:
+            prompt = f"""Tu ek fun desi party bot hai — "Party Riot Bot".
+Tu Hinglish mein baat karta/karti hai. Personality: funny, sarcastic but caring, energetic, desi references, emojis.
+Short responses (2-4 lines max).
+
+Previous:
 {history_text}
 
-User ({user_name}) ne kaha: {clean_msg}
+User ({user.first_name}) ne kaha: {clean_msg}
 
-Respond as the party bot in Hinglish, fun aur friendly way mein. No offensive content."""
+Fun Hinglish mein reply karo. No offensive content."""
             response = model.generate_content(prompt)
             bot_reply = response.text.strip()
 
@@ -319,14 +319,14 @@ Respond as the party bot in Hinglish, fun aur friendly way mein. No offensive co
             save_json(CHAT_HISTORY_FILE, history_data)
             await typing_msg.edit_text(bot_reply)
         except Exception as e:
-            logger.error(f"Message handler AI error: {e}")
+            logger.error(f"Message handler error: {e}")
             try:
-                await typing_msg.edit_text("Yaar dimag thoda load pe hai abhi 😅 Thoda baad try karo!")
+                await typing_msg.edit_text("Yaar dimag load pe hai 😅 Baad mein try karo!")
             except:
                 pass
 
 
-# ================== STATS & INFO COMMANDS ==================
+# ================== INFO COMMANDS ==================
 async def leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if await check_banned(update): return
     await update.message.reply_text(get_leaderboard_text(), parse_mode='Markdown')
@@ -342,17 +342,16 @@ async def economy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             rank = sorted(lb.keys(), key=lambda x: lb[x]["points"], reverse=True).index(uid) + 1
             await update.message.reply_text(
                 f"💰 *{user.first_name}'s ECONOMY* 💰\n━━━━━━━━━━━━━━━━━\n\n"
-                f"🏆 Rank: `#{rank}`\n"
-                f"💎 Points: `{data['points']}`\n"
-                f"😈 Dares Done: `{data.get('dares_done', 0)}`\n"
-                f"🔴 Truths Answered: `{data.get('truths', 0)}`\n"
-                f"🧠 Trivia Correct: `{data.get('trivia_correct', 0)}`\n"
+                f"🏆 Rank: `#{rank}`\n💎 Points: `{data['points']}`\n"
+                f"😈 Dares: `{data.get('dares_done',0)}`\n"
+                f"🔴 Truths: `{data.get('truths',0)}`\n"
+                f"🧠 Trivia Correct: `{data.get('trivia_correct',0)}`\n"
                 f"━━━━━━━━━━━━━━━━━\n_Aur khelo, aur points kamao!_ 🎮",
                 parse_mode='Markdown'
             )
         else:
             await update.message.reply_text(
-                f"💰 *{user.first_name}* — Abhi 0 points!\n\n/truth, /dare, /trivia khelo aur points kamao! 🎮",
+                f"💰 *{user.first_name}* — Abhi 0 points!\n\n/truth /dare /trivia khelo! 🎮",
                 parse_mode='Markdown'
             )
     except Exception as e:
@@ -363,71 +362,58 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     stats = load_json(STATS_FILE, {"total_users": 0, "total_commands": 0})
     confessions = load_json(CONFESS_FILE, [])
     lb = load_json(LEADERBOARD_FILE, {})
-    text = (
-        "📊 *PARTY RIOT V2 - STATS* 📊\n━━━━━━━━━━━━━━━━━\n"
+    await update.message.reply_text(
+        "📊 *PARTY RIOT BOT - STATS* 📊\n━━━━━━━━━━━━━━━━━\n"
         f"👥 *Total Users:* `{stats['total_users']}`\n"
         f"⚡ *Commands Used:* `{stats['total_commands']}`\n"
         f"💌 *Confessions:* `{len(confessions)}`\n"
         f"🏆 *Players on Board:* `{len(lb)}`\n"
-        f"🤖 *Version:* `V2 - Upgraded!`\n"
-        f"🟢 *Status:* `Online & Partying!`\n"
-        "━━━━━━━━━━━━━━━━━\n🎉 _V2 chal raha hai full speed!_ 🔥"
+        "🟢 *Status:* `Online & Partying!`\n"
+        "━━━━━━━━━━━━━━━━━\n🎉 _Full speed party chal rahi hai!_ 🔥",
+        parse_mode='Markdown'
     )
-    await update.message.reply_text(text, parse_mode='Markdown')
 
 async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     start_t = time.time()
-    msg = await update.message.reply_text("🏓 Pong chalc rahi hai...")
-    end_t = time.time()
-    latency = round((end_t - start_t) * 1000, 2)
+    msg = await update.message.reply_text("🏓 Pong chal rahi hai...")
+    latency = round((time.time() - start_t) * 1000, 2)
     await msg.edit_text(
-        f"🏓 *PONG!*\n\n⚡ Latency: `{latency}ms`\n🟢 Status: `Online`\n😂 Mood: `V2 Party Mode!`",
+        f"🏓 *PONG!*\n\n⚡ Latency: `{latency}ms`\n🟢 Status: `Online`\n😂 Mood: `Party Mode!`",
         parse_mode='Markdown'
     )
 
 async def alive_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uptime_seconds = time.time() - BOT_START_TIME
-    uptime = str(timedelta(seconds=int(uptime_seconds)))
+    uptime = str(timedelta(seconds=int(time.time() - BOT_START_TIME)))
     await update.message.reply_text(
-        f"🌸 *PARTY RIOT V2 - ALIVE!* 🌸\n━━━━━━━━━━━━━━━━━\n"
+        f"🌸 *PARTY RIOT BOT - ALIVE!* 🌸\n━━━━━━━━━━━━━━━━━\n"
         f"✅ *Status:* `Fully Operational`\n"
         f"⏱️ *Uptime:* `{uptime}`\n"
-        f"🎉 *Version:* `V2 — Upgraded!`\n"
         f"🤖 *AI:* `Gemini 1.5 Flash`\n"
-        f"━━━━━━━━━━━━━━━━━\nZinda hoon bhai, full josh V2 mein! 🔥",
+        f"━━━━━━━━━━━━━━━━━\nZinda hoon, full josh mein! 🔥",
         parse_mode='Markdown'
     )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if await check_banned(update): return
-    text = (
-        "📖 *PARTY RIOT V2 - HELP* 📖\n━━━━━━━━━━━━━━━━━\n\n"
+    await update.message.reply_text(
+        "📖 *PARTY RIOT BOT - HELP* 📖\n━━━━━━━━━━━━━━━━━\n\n"
         "🎮 *Classic Games:*\n"
         "`/truth` `/dare` `/spin` `/couple`\n"
         "`/roast @user` `/confess [text]`\n"
         "`/ngl [msg]` `/wyr` `/shipname`\n"
         "`/rate @user` `/leaderboard`\n\n"
-        "✨ *New V2 Commands:*\n"
-        "`/fortune` — Aaj ka bhavishya\n"
-        "`/8ball [q]` — Magic 8 ball\n"
-        "`/zodiac [sign]` — Rashifal\n"
-        "`/compliment @user` — Tarif\n"
-        "`/mood [text]` — Mood set\n"
-        "`/ask [question]` — AI se pooch\n"
-        "`/battle @user` — Epic battle\n"
-        "`/fact` — Random cool fact\n"
-        "`/nhie` — Never Have I Ever\n"
-        "`/trivia` — Quiz with points\n"
-        "`/rng [max]` — Random number\n"
-        "`/streak` — Daily streak\n"
-        "`/economy` — Points check\n"
-        "`/poll [question]` — Group poll\n\n"
+        "✨ *More:*\n"
+        "`/fortune` `/8ball [q]` `/zodiac [sign]`\n"
+        "`/compliment @user` `/mood [text]`\n"
+        "`/ask [q]` `/battle @user` `/fact`\n"
+        "`/nhie` `/trivia` `/rng [max]`\n"
+        "`/streak` `/economy` `/poll [q]`\n\n"
         "📊 *Info:*\n"
         "`/start` `/help` `/stats` `/ping` `/alive`\n\n"
         "━━━━━━━━━━━━━━━━━\n"
-        "🤖 _Mujhse baat bhi kar sakta hai — main reply karta hoon!_ 😊"
+        "🤖 _Mujhse baat bhi kar sakto ho!_ 😊",
+        parse_mode='Markdown'
     )
-    await update.message.reply_text(text, parse_mode='Markdown')
 
 
 # ================== OWNER COMMANDS ==================
@@ -436,9 +422,8 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("Usage: `/broadcast [message]`", parse_mode='Markdown')
         return
-    msg = " ".join(context.args)
     await update.message.reply_text(
-        f"📢 *OWNER BROADCAST* 📢\n━━━━━━━━━━━━━━━━━\n\n{msg}\n\n━━━━━━━━━━━━━━━━━\n— _Party Riot Bot V2 Owner_ 👑",
+        f"📢 *OWNER BROADCAST* 📢\n━━━━━━━━━━━━━━━━━\n\n{' '.join(context.args)}\n\n━━━━━━━━━━━━━━━━━\n— _Party Riot Bot Owner_ 👑",
         parse_mode='Markdown'
     )
 
@@ -455,7 +440,7 @@ async def ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
             save_json(BANNED_FILE, banned)
             await update.message.reply_text(f"🔨 *User `{target_id}` ban!*", parse_mode='Markdown')
         else:
-            await update.message.reply_text("⚠️ Already banned.", parse_mode='Markdown')
+            await update.message.reply_text("⚠️ Already banned.")
     except ValueError:
         await update.message.reply_text("❌ Valid user ID daal!")
 
@@ -472,7 +457,7 @@ async def unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
             save_json(BANNED_FILE, banned)
             await update.message.reply_text(f"✅ *User `{target_id}` unban!*", parse_mode='Markdown')
         else:
-            await update.message.reply_text("⚠️ Not banned.", parse_mode='Markdown')
+            await update.message.reply_text("⚠️ Not banned.")
     except ValueError:
         await update.message.reply_text("❌ Valid user ID daal!")
 
@@ -483,10 +468,10 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     try:
         target_id = int(context.args[0])
-        reason = " ".join(context.args[1:]) if len(context.args) > 1 else "No reason given"
+        reason = " ".join(context.args[1:]) if len(context.args) > 1 else "No reason"
         count = warn_user(target_id, f"User#{target_id}", reason)
         await update.message.reply_text(
-            f"⚠️ *User `{target_id}` warned!*\nReason: _{reason}_\nTotal warnings: `{count}`",
+            f"⚠️ *User `{target_id}` warned!*\nReason: _{reason}_\nTotal: `{count}`",
             parse_mode='Markdown'
         )
         if count >= 3:
@@ -494,7 +479,7 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if target_id not in banned:
                 banned.append(target_id)
                 save_json(BANNED_FILE, banned)
-                await update.message.reply_text("🔨 Auto-banned after 3 warnings!", parse_mode='Markdown')
+                await update.message.reply_text("🔨 Auto-banned after 3 warnings!")
     except ValueError:
         await update.message.reply_text("❌ Valid user ID daal!")
 
@@ -517,12 +502,12 @@ async def owner_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     warnings = load_json(WARNINGS_FILE, {})
     uptime = str(timedelta(seconds=int(time.time() - BOT_START_TIME)))
     await update.message.reply_text(
-        f"🔐 *OWNER DASHBOARD V2* 🔐\n━━━━━━━━━━━━━━━━━\n"
+        f"🔐 *OWNER DASHBOARD* 🔐\n━━━━━━━━━━━━━━━━━\n"
         f"👥 Users: `{stats.get('total_users', 0)}`\n"
         f"⚡ Commands: `{stats.get('total_commands', 0)}`\n"
         f"💌 Confessions: `{len(confessions)}`\n"
         f"🔨 Banned: `{len(banned)}`\n"
-        f"⚠️ Warned Users: `{len(warnings)}`\n"
+        f"⚠️ Warned: `{len(warnings)}`\n"
         f"🏆 Board Entries: `{len(lb)}`\n"
         f"⏱️ Uptime: `{uptime}`\n"
         f"━━━━━━━━━━━━━━━━━\n🕐 `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`",
@@ -553,10 +538,8 @@ async def send_as_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Usage: `/say [chat_id] [message]`", parse_mode='Markdown')
         return
     try:
-        chat_id = context.args[0]
-        msg = " ".join(context.args[1:])
-        await context.bot.send_message(chat_id=chat_id, text=msg)
-        await update.message.reply_text("✅ Sent!", parse_mode='Markdown')
+        await context.bot.send_message(chat_id=context.args[0], text=" ".join(context.args[1:]))
+        await update.message.reply_text("✅ Sent!")
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {e}")
 
@@ -565,9 +548,8 @@ async def announce_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("Usage: `/announce [message]`", parse_mode='Markdown')
         return
-    msg = " ".join(context.args)
     await update.message.reply_text(
-        f"📣 *PARTY RIOT BOT ANNOUNCEMENT* 📣\n{'━' * 20}\n\n🔔 {msg}\n\n{'━' * 20}\n_— Party Riot Bot V2_ 🎉",
+        f"📣 *PARTY RIOT BOT ANNOUNCEMENT* 📣\n{'━'*20}\n\n🔔 {' '.join(context.args)}\n\n{'━'*20}\n_— Party Riot Bot_ 🎉",
         parse_mode='Markdown'
     )
 
@@ -576,13 +558,15 @@ async def announce_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from games import (
         TRUTH_QUESTIONS, DARE_CHALLENGES, WYR_QUESTIONS,
-        TRIVIA_QUESTIONS, NEVER_HAVE_I_EVER, FORTUNE_COOKIES, ROAST_LINES
+        TRIVIA_QUESTIONS, NEVER_HAVE_I_EVER, FORTUNE_COOKIES,
+        ROAST_LINES, MOOD_RESPONSES, SPIN_POSITIONS
     )
     query = update.callback_query
     await query.answer()
     data = query.data
     user = query.from_user
 
+    # ---- TRUTH ----
     if data == 'truth':
         question = random.choice(TRUTH_QUESTIONS)
         keyboard = [[
@@ -595,6 +579,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
+    # ---- DARE ----
     elif data == 'dare':
         challenge = random.choice(DARE_CHALLENGES)
         keyboard = [[
@@ -603,7 +588,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("🔴 Truth!", callback_data='truth')
         ]]
         await query.message.reply_text(
-            f"🟠 *DARE!*\n━━━━━━━━━━━━━━━━━\n😈 *{user.first_name}* ko:\n\n⚡ _{challenge}_\n\n━━━━━━━━━━━━━━━━━\nKar sakta hai? 😂",
+            f"🟠 *DARE!*\n━━━━━━━━━━━━━━━━━\n😈 *{user.first_name}* ko:\n\n⚡ _{challenge}_\n\n━━━━━━━━━━━━━━━━━\nKar sakta/sakti hai? 😂",
             parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
@@ -611,7 +596,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         update_leaderboard(user.id, user.first_name, 10, "dare")
         streak = update_streak(user.id, user.first_name)
         await query.message.reply_text(
-            f"✅ *{user.first_name}* ne dare complete kiya!\n🏆 *+10 points!*\n🔥 Streak: `{streak} days`\n\n_Legend hai bhai!_ 🔥",
+            f"✅ *{user.first_name}* ne dare complete kiya!\n🏆 *+10 points!*\n🔥 Streak: `{streak} days`\n\n_Legend!_ 🔥",
             parse_mode='Markdown'
         )
 
@@ -622,46 +607,70 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
 
+    # ---- SPIN — user claims their direction ----
     elif data == 'spin':
-        funny_names = ["Sharma Ji Ka Beta 🤓", "Chai Wala ☕", "Neend Ki Dushman 😴", "Bakwaas Master 🗣️", "Group Ka Ghost 👻"]
-        picked = random.choice(funny_names)
+        # Re-spin from button
+        arrow = random.choice(list(SPIN_POSITIONS.keys()))
+        position_label = SPIN_POSITIONS[arrow]
+        action = random.choice(["Truth lo! 🔴", "Dare lo! 🟠", "Compliment do! 💕", "Roast karo! 😂"])
+        keyboard = [
+            [InlineKeyboardButton("↖️ Main hun!", callback_data='spin_claim_↖️'),
+             InlineKeyboardButton("⬆️ Main hun!", callback_data='spin_claim_⬆️'),
+             InlineKeyboardButton("↗️ Main hun!", callback_data='spin_claim_↗️')],
+            [InlineKeyboardButton("⬅️ Main hun!", callback_data='spin_claim_⬅️'),
+             InlineKeyboardButton("🍾 Spin Again", callback_data='spin'),
+             InlineKeyboardButton("➡️ Main hun!", callback_data='spin_claim_➡️')],
+            [InlineKeyboardButton("↙️ Main hun!", callback_data='spin_claim_↙️'),
+             InlineKeyboardButton("⬇️ Main hun!", callback_data='spin_claim_⬇️'),
+             InlineKeyboardButton("↘️ Main hun!", callback_data='spin_claim_↘️')],
+        ]
         await query.message.reply_text(
-            f"🍾 *Bottle ruki!*\n\n🎯 *{picked}* — ab tumhari baari! 😈",
+            f"🍾 *BOTTLE RUKI!*\n━━━━━━━━━━━━━━━━━\n\n"
+            f"🎯 Pointing: *{arrow}* — *{position_label}* taraf!\n\n"
+            f"📌 Unhe milega: *{action}*\n\n"
+            f"_Apni direction ka button dabao!_ 😈",
+            parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    elif data.startswith('spin_claim_'):
+        claimed_arrow = data.replace('spin_claim_', '')
+        await query.message.reply_text(
+            f"🎯 *{user.first_name}* {claimed_arrow} direction mein hai!\n\n"
+            f"😈 Tujhe dare/truth lena hoga! Chal aage baarh! 🔥",
             parse_mode='Markdown'
         )
 
+    # ---- COUPLE ----
     elif data == 'couple':
-        names = ["Rahul", "Priya", "Arjun", "Sneha", "Riya", "Dev", "Kavya", "Rohan"]
-        p1 = random.choice(names)
-        names.remove(p1)
-        p2 = random.choice(names)
+        pool = ["Rahul 🕵️", "Priya 🌸", "Arjun 😎", "Sneha 💕", "Dev 🏆", "Kavya 🦋", "Rohan 🎸", "Meera 🌙"]
+        p1 = random.choice(pool); pool.remove(p1)
+        p2 = random.choice(pool)
         score = random.randint(60, 100)
         bar = "▓" * (score // 10) + "░" * (10 - score // 10)
         await query.message.reply_text(
-            f"💘 *{p1}* + *{p2}* = `{score}%`\n`[{bar}]`\n\n_Ship: {p1[:3]}{p2[:3]}_ 😂",
+            f"💘 *{p1}* + *{p2}* = `{score}%`\n`[{bar}]`\n\n_Try /couple @username for personalized result!_ 😂",
             parse_mode='Markdown'
         )
 
     elif data == 'ship_random':
         names = ["Rahul", "Priya", "Arjun", "Sneha", "Dev", "Meera"]
-        n1 = random.choice(names)
-        names.remove(n1)
-        n2 = random.choice(names)
+        n1 = random.choice(names); names.remove(n1); n2 = random.choice(names)
         ship = n1[:len(n1)//2+1] + n2[len(n2)//2:]
         await query.message.reply_text(f"⚡ *Ship:* `{ship}`\n👫 {n1} + {n2} = 💕", parse_mode='Markdown')
 
+    # ---- FORTUNE ----
     elif data == 'fortune':
         fortune = random.choice(FORTUNE_COOKIES)
         lucky = random.randint(1, 99)
         await query.message.reply_text(
-            f"🔮 *YOUR FORTUNE*\n━━━━━━━━━━━━━━━━━\n\n_{fortune}_\n\n🍀 Lucky Number: `{lucky}`",
+            f"🔮 *{user.first_name} KA FORTUNE*\n━━━━━━━━━━━━━━━━━\n\n_{fortune}_\n\n🍀 Lucky Number: `{lucky}`",
             parse_mode='Markdown'
         )
 
+    # ---- TRIVIA ----
     elif data == 'trivia':
         q_data = random.choice(TRIVIA_QUESTIONS)
-        options = q_data["options"]
-        keyboard = [[InlineKeyboardButton(opt, callback_data=f'trivia_{i}_{q_data["answer"]}_{user.id}')] for i, opt in enumerate(options)]
+        keyboard = [[InlineKeyboardButton(opt, callback_data=f'trivia_{i}_{q_data["answer"]}_{user.id}')] for i, opt in enumerate(q_data["options"])]
         await query.message.reply_text(
             f"{q_data['q']}\n\n_Sahi jawab do!_ 🏆",
             parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard)
@@ -672,58 +681,64 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chosen = int(parts[1])
         correct = int(parts[2])
         q_data = next((q for q in TRIVIA_QUESTIONS if q["answer"] == correct), None)
+        explanation = q_data["explanation"] if q_data else ""
         if chosen == correct:
             update_leaderboard(user.id, user.first_name, 15, "trivia")
-            explanation = q_data["explanation"] if q_data else "Sahi hai!"
             await query.message.reply_text(
                 f"✅ *{user.first_name}* CORRECT! 🎉\n+15 points!\n\n📖 _{explanation}_",
                 parse_mode='Markdown'
             )
         else:
-            explanation = q_data["explanation"] if q_data else "Galat jawab!"
             await query.message.reply_text(
                 f"❌ *{user.first_name}* galat! 😅\n\n📖 _{explanation}_",
                 parse_mode='Markdown'
             )
 
+    # ---- LEADERBOARD ----
     elif data == 'leaderboard':
         await query.message.reply_text(get_leaderboard_text(), parse_mode='Markdown')
 
+    # ---- HELP ----
     elif data == 'help':
-        text = (
-            "📖 *Quick Help V2:*\n\n"
-            "Classic: `/truth` `/dare` `/spin` `/couple`\n"
-            "New V2: `/fortune` `/8ball` `/zodiac` `/battle`\n"
+        await query.message.reply_text(
+            "📖 *Quick Help:*\n\nClassic: `/truth` `/dare` `/spin` `/couple`\n"
+            "New: `/fortune` `/8ball` `/zodiac` `/battle`\n"
             "AI: `/ask` `/roast` `/compliment` `/fact`\n"
             "Stats: `/economy` `/streak` `/leaderboard`\n\n"
-            "_/help ke liye full menu!_ 🎉"
+            "_/help ke liye full menu!_ 🎉",
+            parse_mode='Markdown'
         )
-        await query.message.reply_text(text, parse_mode='Markdown')
 
+    # ---- FACT ----
     elif data == 'fact':
         try:
-            prompt = "Give one mind-blowing fact in Hinglish. 2 sentences. Emojis."
-            response = model.generate_content(prompt)
+            response = model.generate_content("Mind-blowing fact in Hinglish. 2 sentences. Emojis.")
             fact = response.text
         except:
-            fact = "Insaan ke body mein itna iron hai ki ek choti nail ban sakti hai! 🔩"
+            fact = "Insaan ke body mein itna iron hai ki ek nail ban sakti hai! 🔩"
         keyboard = [[InlineKeyboardButton("🌍 Aur Fact!", callback_data='fact')]]
         await query.message.reply_text(
             f"🌍 *RANDOM FACT*\n━━━━━━━━━━━━━━━━━\n\n{fact}",
             parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-    elif data == 'nhie':
+    # ---- NHIE — "Next" edits the SAME message ----
+    elif data == 'nhie_next':
         statement = random.choice(NEVER_HAVE_I_EVER)
         keyboard = [[
             InlineKeyboardButton("✅ Maine kiya!", callback_data='nhie_done'),
-            InlineKeyboardButton("❌ Nahi kiya", callback_data='nhie_notdone'),
-            InlineKeyboardButton("🔄 Next!", callback_data='nhie')
+            InlineKeyboardButton("❌ Maine nahi kiya", callback_data='nhie_notdone'),
+        ], [
+            InlineKeyboardButton("🔄 Aagla Statement", callback_data='nhie_next')
         ]]
-        await query.message.reply_text(
-            f"🃏 *NEVER HAVE I EVER*\n\n_{statement}_\n\n_Honestly jawab do!_ 😏",
-            parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+        try:
+            await query.message.edit_text(
+                f"🃏 *NEVER HAVE I EVER* 🃏\n━━━━━━━━━━━━━━━━━\n\n"
+                f"_{statement}_\n\n━━━━━━━━━━━━━━━━━\n_Honestly jawab dena! 😏_",
+                parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+        except:
+            pass  # Message not editable (e.g., too old)
 
     elif data == 'nhie_done':
         update_leaderboard(user.id, user.first_name, 3)
@@ -732,6 +747,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == 'nhie_notdone':
         await query.answer(f"😇 {user.first_name} ne nahi kiya! Innocent!", show_alert=True)
 
+    # ---- MOOD ----
     elif data.startswith('mood_'):
         mood_map = {
             'mood_happy': "😄 Happy", 'mood_sad': "😢 Sad",
@@ -742,38 +758,141 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         moods = load_json(MOOD_FILE, {})
         moods[str(user.id)] = {"name": user.first_name, "mood": mood_text, "time": datetime.now().isoformat()}
         save_json(MOOD_FILE, moods)
+
+        # Mood-based response
+        mood_key = data.replace('mood_', '')
+        response_list = MOOD_RESPONSES.get(mood_key, ["Mood set! 🎭"])
         await query.message.reply_text(
-            f"🎭 *{user.first_name}'s mood set to:* {mood_text}\n\n_Bot note kar liya!_ 📝",
+            f"🎭 *{user.first_name}'s mood:* {mood_text}\n\n_{random.choice(response_list)}_\n\n"
+            f"_Ab jab koi tag karega toh mood ke hisaab se reply milega!_ 😊",
             parse_mode='Markdown'
         )
 
-    elif data.startswith('wyr_'):
-        await query.message.reply_text(
-            f"*{user.first_name}* ne choose kiya! 😂\n_Interesting choice!_ 🤔",
-            parse_mode='Markdown'
-        )
+    # ---- WYR — vote count updates on button ----
+    elif data.startswith('wyr_vote_'):
+        parts = data.split('_')
+        # format: wyr_vote_{option_index}_{poll_id_parts...}
+        option_idx = parts[2]
+        poll_id = '_'.join(parts[3:])
 
-    elif data.startswith('poll_'):
-        option = data.replace('poll_', '')
-        await query.answer(f"Voted: {option}!", show_alert=False)
-        await query.message.reply_text(
-            f"📊 *{user.first_name}* ne vote diya: `{option}`",
-            parse_mode='Markdown'
-        )
+        polls = load_json(POLLS_FILE, {})
+        if poll_id not in polls:
+            await query.answer("Poll expired!", show_alert=True)
+            return
 
-    elif data.startswith('confess_react_'):
-        await query.answer("React recorded! 💕", show_alert=False)
+        poll = polls[poll_id]
+        voter_key = str(user.id)
 
+        # One vote per user
+        if voter_key in poll.get("voters", {}):
+            await query.answer("Tu pehle hi vote kar chuka/chuki hai! 😂", show_alert=True)
+            return
+
+        poll["votes"][option_idx] = poll["votes"].get(option_idx, 0) + 1
+        poll["voters"][voter_key] = option_idx
+        polls[poll_id] = poll
+        save_json(POLLS_FILE, polls)
+
+        # Rebuild keyboard with updated counts
+        options = poll["options"]
+        keyboard = []
+        for i, opt in enumerate(options):
+            count = poll["votes"].get(str(i), 0)
+            prefix = "🅰️" if i == 0 else "🅱️"
+            keyboard.append([InlineKeyboardButton(
+                f"{prefix} {opt[:20]} — {count} vote{'s' if count != 1 else ''}",
+                callback_data=f'wyr_vote_{i}_{poll_id}'
+            )])
+
+        try:
+            await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(keyboard))
+        except:
+            pass
+        await query.answer(f"Vote diya! 🗳️", show_alert=False)
+
+    # ---- POLL — vote count updates ----
+    elif data.startswith('poll_vote_'):
+        parts = data.split('_')
+        # format: poll_vote_{option_index}_{poll_id_parts...}
+        option_idx = parts[2]
+        poll_id = '_'.join(parts[3:])
+
+        polls = load_json(POLLS_FILE, {})
+        if poll_id not in polls:
+            await query.answer("Poll expired!", show_alert=True)
+            return
+
+        poll = polls[poll_id]
+        voter_key = str(user.id)
+
+        if voter_key in poll.get("voters", {}):
+            await query.answer("Tu pehle hi vote kar chuka/chuki hai! 😂", show_alert=True)
+            return
+
+        poll["votes"][option_idx] = poll["votes"].get(option_idx, 0) + 1
+        poll["voters"][voter_key] = option_idx
+        polls[poll_id] = poll
+        save_json(POLLS_FILE, polls)
+
+        # Rebuild keyboard with updated counts
+        options = poll["options"]
+        keyboard = [[InlineKeyboardButton(
+            f"{opt} — {poll['votes'].get(str(i), 0)} vote{'s' if poll['votes'].get(str(i), 0) != 1 else ''}",
+            callback_data=f'poll_vote_{i}_{poll_id}'
+        )] for i, opt in enumerate(options)]
+
+        try:
+            await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(keyboard))
+        except:
+            pass
+        await query.answer(f"Vote diya! 🗳️", show_alert=False)
+
+    # ---- CONFESS REACTIONS — working count ----
+    elif data.startswith('confess_heart_') or data.startswith('confess_woah_'):
+        react_type = 'heart' if data.startswith('confess_heart_') else 'woah'
+        confession_id = int(data.split('_')[-1])
+
+        confessions = load_json(CONFESS_FILE, [])
+        for c in confessions:
+            if c.get("id") == confession_id:
+                if "reactions" not in c:
+                    c["reactions"] = {"heart": 0, "woah": 0}
+                if "reactors" not in c:
+                    c["reactors"] = {}
+                reactor_key = str(user.id)
+                if reactor_key in c["reactors"]:
+                    await query.answer("Ek baar hi react kar sakte ho! 😂", show_alert=True)
+                    return
+                c["reactions"][react_type] += 1
+                c["reactors"][reactor_key] = react_type
+                break
+        save_json(CONFESS_FILE, confessions)
+
+        # Update button counts
+        heart_count = next((c["reactions"]["heart"] for c in confessions if c.get("id") == confession_id), 0)
+        woah_count = next((c["reactions"]["woah"] for c in confessions if c.get("id") == confession_id), 0)
+
+        keyboard = [[
+            InlineKeyboardButton(f"❤️ Relate! ({heart_count})", callback_data=f'confess_heart_{confession_id}'),
+            InlineKeyboardButton(f"😮 Woah! ({woah_count})", callback_data=f'confess_woah_{confession_id}')
+        ]]
+        try:
+            await query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(keyboard))
+        except:
+            pass
+        emoji = "❤️" if react_type == "heart" else "😮"
+        await query.answer(f"{emoji} React recorded!", show_alert=False)
+
+    # ---- ROAST ----
     elif data.startswith('roast_'):
         target = data.replace('roast_', '')
         try:
-            prompt = f"New brutal funny Hinglish roast for '{target}'. 4 lines. Comedy only. Emojis."
-            response = model.generate_content(prompt)
+            response = model.generate_content(f"Funny Hinglish roast for '{target}'. 4 lines. Comedy only. Emojis.")
             roast_text = response.text
         except:
             roast_text = random.choice(ROAST_LINES)
         await query.message.reply_text(
-            f"🔥 *ROAST V2: {target}*\n━━━━━━━━━━━━━━━━━\n\n{roast_text}\n\n😂 _Pyaar se!_",
+            f"🔥 *ROAST: {target}*\n━━━━━━━━━━━━━━━━━\n\n{roast_text}\n\n😂 _Pyaar se!_",
             parse_mode='Markdown'
         )
 
@@ -784,7 +903,7 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await context.bot.send_message(
             chat_id=OWNER_ID,
-            text=f"⚠️ *Bot Error V2:*\n```\n{str(context.error)[:400]}\n```",
+            text=f"⚠️ *Bot Error:*\n```\n{str(context.error)[:400]}\n```",
             parse_mode='Markdown'
         )
     except:
@@ -805,12 +924,12 @@ def main():
         random_number, battle_command, fact_command, poll_command
     )
 
-    logger.info("🎉 Booting Party Riot Bot V2...")
+    logger.info("🎉 Booting Party Riot Bot...")
     keep_alive()
 
     app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
 
-    # Classic game commands
+    # Classic games
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("truth", truth))
     app.add_handler(CommandHandler("dare", dare))
@@ -825,7 +944,7 @@ def main():
     app.add_handler(CommandHandler("leaderboard", leaderboard))
     app.add_handler(CommandHandler("nhie", never_have_i_ever))
 
-    # New V2 commands
+    # More commands
     app.add_handler(CommandHandler("fortune", fortune_command))
     app.add_handler(CommandHandler("8ball", eight_ball))
     app.add_handler(CommandHandler("zodiac", zodiac_command))
@@ -840,13 +959,13 @@ def main():
     app.add_handler(CommandHandler("economy", economy_command))
     app.add_handler(CommandHandler("poll", poll_command))
 
-    # Info commands
+    # Info
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(CommandHandler("ping", ping_command))
     app.add_handler(CommandHandler("alive", alive_command))
 
-    # Owner commands
+    # Owner
     app.add_handler(CommandHandler("broadcast", broadcast))
     app.add_handler(CommandHandler("ban", ban_user))
     app.add_handler(CommandHandler("unban", unban_user))
@@ -859,17 +978,16 @@ def main():
     app.add_handler(CommandHandler("say", send_as_bot))
     app.add_handler(CommandHandler("announce", announce_command))
 
-    # Message handler (MUST be last)
+    # Message handler (LAST)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # Callback buttons
+    # Callbacks
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_error_handler(error_handler)
 
-    logger.info("✅ Party Riot Bot V2 Ready! Let's go! 🎉")
+    logger.info("✅ Party Riot Bot Ready! 🎉")
     app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == '__main__':
     main()
-    
