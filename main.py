@@ -258,32 +258,48 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                        update.message.reply_to_message.from_user and
                        update.message.reply_to_message.from_user.is_bot)
 
-    # Mood tag detection: someone tagged a user who has a mood set
-    # If message mentions @someone in a group, check if that someone has a mood
-    if update.message.entities:
+    # Mood tag detection
+    # Jab koi @username tag kare aur us user ka mood set ho
+    if update.message.entities and not is_private:
         from games import MOOD_RESPONSES
         moods = load_json(MOOD_FILE, {})
+        full_text = update.message.text or ""
         for entity in update.message.entities:
+            matched_data = None
+
             if entity.type == "mention":
-                mention_text = update.message.text[entity.offset:entity.offset + entity.length]
-                # Check if any user in moods has this username
+                # @username format — extract without @
+                tagged_username = full_text[entity.offset:entity.offset + entity.length].lstrip("@").lower()
                 for uid, data in moods.items():
-                    if data.get("name", "").lower() in mention_text.lower():
-                        mood_text = data.get("mood", "").lower()
-                        # Find matching mood key
-                        response = None
-                        for key, replies in MOOD_RESPONSES.items():
-                            if key in mood_text:
-                                response = random.choice(replies)
-                                break
-                        if not response:
-                            response = f"_{data['name']} ka mood hai: {data.get('mood', '?')}_ 🎭"
-                        await asyncio.sleep(0.5)
-                        await update.message.reply_text(
-                            f"🎭 *{data['name']} ka mood alert!*\n\n{response}",
-                            parse_mode='Markdown'
-                        )
-                        return
+                    stored_uname = data.get("username", "").lower()
+                    if stored_uname and stored_uname == tagged_username:
+                        matched_data = data
+                        break
+
+            elif entity.type == "text_mention":
+                # User has no username — Telegram gives user object directly
+                if entity.user:
+                    tagged_id = str(entity.user.id)
+                    if tagged_id in moods:
+                        matched_data = moods[tagged_id]
+
+            if matched_data:
+                raw_mood = matched_data.get("mood", "").lower()
+                person_name = matched_data.get("name", "Woh")
+                response = None
+                for key, replies in MOOD_RESPONSES.items():
+                    if key in raw_mood:
+                        response = random.choice(replies)
+                        break
+                if not response:
+                    response = f"Mood hai: _{matched_data.get('mood', '?')}_ 🎭"
+                await asyncio.sleep(0.4)
+                await update.message.reply_text(
+                    f"🎭 *{person_name} ka mood alert!*\n\n{response}",
+                    parse_mode='Markdown'
+                )
+                return
+
 
     # Keyword quick replies — SIRF private chat mein
     # Groups mein bot bina bulaye reply nahi karega
@@ -762,7 +778,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
         mood_text = mood_map.get(data, "Unknown")
         moods = load_json(MOOD_FILE, {})
-        moods[str(user.id)] = {"name": user.first_name, "mood": mood_text, "time": datetime.now().isoformat()}
+        moods[str(user.id)] = {"name": user.first_name, "username": (user.username or "").lower(), "mood": mood_text, "time": datetime.now().isoformat()}
         save_json(MOOD_FILE, moods)
 
         # Mood-based response
@@ -1161,4 +1177,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
