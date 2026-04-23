@@ -34,6 +34,10 @@ if not OWNER_ID_STR:
     raise ValueError("❌ OWNER_ID environment variable is required!")
 OWNER_ID = int(OWNER_ID_STR)
 
+# Log channel — set LOG_CHANNEL_ID in env (e.g. -1001234567890)
+LOG_CHANNEL_ID_STR = os.getenv("LOG_CHANNEL_ID")
+LOG_CHANNEL_ID = int(LOG_CHANNEL_ID_STR) if LOG_CHANNEL_ID_STR else None
+
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
@@ -227,7 +231,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
              InlineKeyboardButton("📖 Help", callback_data='help')]
         ]
 
-        video_url = "https://files.catbox.moe/qkeqgs.mp4"
+        video_url = "https://files.catbox.moe/dlg0rb.mp4"
         try:
             await context.bot.send_video(chat_id=chat_id, video=video_url, caption=welcome_text,
                                          reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -281,14 +285,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         )
                         return
 
-    # Keyword quick replies (groups too)
-    for keyword, replies in BOT_PERSONALITY_REPLIES.items():
-        if keyword in msg:
-            await asyncio.sleep(0.5)
-            await update.message.reply_text(random.choice(replies))
-            return
+    # Keyword quick replies — SIRF private chat mein
+    # Groups mein bot bina bulaye reply nahi karega
+    if is_private:
+        for keyword, replies in BOT_PERSONALITY_REPLIES.items():
+            if keyword in msg:
+                await asyncio.sleep(0.5)
+                await update.message.reply_text(random.choice(replies))
+                return
 
-    # AI reply for private / mention / reply
+    # AI reply — private chat, ya jab @mention / reply to bot ho
     if is_private or is_mentioned or is_reply_to_bot:
         clean_msg = msg.replace(f"@{bot_username}", "").strip()
         if not clean_msg or len(clean_msg) < 2:
@@ -897,6 +903,79 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+# ================== GROUP JOIN LOGGER ==================
+async def group_join_logger(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Fires when bot is added to any group — sends full info to log channel."""
+    if not LOG_CHANNEL_ID:
+        return  # Log channel not configured, skip silently
+
+    for member in update.message.new_chat_members:
+        if member.id != context.bot.id:
+            continue  # Only care when the bot itself was added
+
+        chat = update.effective_chat
+        added_by = update.message.from_user
+
+        # Try to get member count
+        try:
+            member_count = await context.bot.get_chat_member_count(chat.id)
+        except:
+            member_count = "N/A"
+
+        # Chat type label
+        chat_type_map = {
+            "group": "👥 Group",
+            "supergroup": "👥 Supergroup",
+            "channel": "📢 Channel",
+            "private": "👤 Private",
+        }
+        chat_type_label = chat_type_map.get(chat.type, chat.type)
+
+        # Chat username / invite link
+        chat_username = f"@{chat.username}" if chat.username else "_No username_"
+
+        # Who added the bot
+        adder_info = (
+            f"[{added_by.first_name}](tg://user?id={added_by.id})"
+            f" (`{added_by.id}`)"
+            if added_by else "_Unknown_"
+        )
+
+        log_text = (
+            f"🤖 *Bot Added to a New Group!*\n"
+            f"━━━━━━━━━━━━━━━━━\n"
+            f"📛 *Group Name:* `{chat.title}`\n"
+            f"🆔 *Chat ID:* `{chat.id}`\n"
+            f"🔗 *Username:* {chat_username}\n"
+            f"📊 *Type:* {chat_type_label}\n"
+            f"👥 *Members:* `{member_count}`\n"
+            f"━━━━━━━━━━━━━━━━━\n"
+            f"➕ *Added By:* {adder_info}\n"
+            f"🕐 *Time:* `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`"
+        )
+
+        try:
+            await context.bot.send_message(
+                chat_id=LOG_CHANNEL_ID,
+                text=log_text,
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            logger.error(f"Log channel send error: {e}")
+
+        # Also notify owner directly as backup
+        try:
+            await context.bot.send_message(
+                chat_id=OWNER_ID,
+                text=f"✅ Bot add hua!\n\n*{chat.title}* (`{chat.id}`)\nMembers: `{member_count}`",
+                parse_mode='Markdown'
+            )
+        except:
+            pass
+
+        break  # Only process once even if multiple new members
+
+
 # ================== ERROR HANDLER ==================
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.error(f"Error: {context.error}")
@@ -908,6 +987,94 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except:
         pass
+
+# ================== GROUP JOIN LOGGER ==================
+async def group_join_logger(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Fires when any NEW_CHAT_MEMBERS status update arrives.
+    If the bot itself is one of the new members → it was just added to a group.
+    Sends a detailed log to LOG_CHANNEL_ID (env var).
+    """
+    try:
+        new_members = update.message.new_chat_members
+        bot_id = context.bot.id
+
+        # Check if the bot is among the newly added members
+        bot_added = any(member.id == bot_id for member in new_members)
+        if not bot_added:
+            return  # Someone else was added, not the bot
+
+        chat = update.effective_chat
+        added_by = update.message.from_user  # who added the bot
+
+        # Gather group info
+        chat_id    = chat.id
+        chat_title = chat.title or "Unknown"
+        chat_type  = chat.type  # group / supergroup / channel
+        chat_username = f"@{chat.username}" if chat.username else "_(No username / Private group)_"
+
+        # Try to get member count
+        try:
+            member_count = await context.bot.get_chat_member_count(chat_id)
+        except:
+            member_count = "N/A"
+
+        # Info about who added the bot
+        adder_id       = added_by.id
+        adder_name     = added_by.full_name
+        adder_username = f"@{added_by.username}" if added_by.username else "_(No username)_"
+
+        timestamp = datetime.now().strftime("%d %b %Y, %I:%M %p")
+
+        log_text = (
+            "🔔 *BOT ADDED TO A NEW GROUP!*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "🏠 *GROUP INFO*\n"
+            f"📛 Name: `{chat_title}`\n"
+            f"🆔 Chat ID: `{chat_id}`\n"
+            f"🔗 Username: {chat_username}\n"
+            f"📂 Type: `{chat_type}`\n"
+            f"👥 Members: `{member_count}`\n\n"
+            "👤 *ADDED BY*\n"
+            f"🙍 Name: `{adder_name}`\n"
+            f"🆔 User ID: `{adder_id}`\n"
+            f"📎 Username: {adder_username}\n\n"
+            f"🕐 *Time:* `{timestamp}`\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📊 Total Groups Joined So Far: see /ownerstats"
+        )
+
+        # Send to log channel if set
+        if LOG_CHANNEL_ID:
+            try:
+                await context.bot.send_message(
+                    chat_id=LOG_CHANNEL_ID,
+                    text=log_text,
+                    parse_mode='Markdown'
+                )
+            except Exception as e:
+                logger.error(f"Log channel send error: {e}")
+
+        # Also DM the owner directly as backup
+        try:
+            await context.bot.send_message(
+                chat_id=OWNER_ID,
+                text=log_text,
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            logger.error(f"Owner DM send error: {e}")
+
+        # Update stats
+        stats = load_json(STATS_FILE, {"total_users": 0, "total_commands": 0, "total_groups": 0})
+        stats["total_groups"] = stats.get("total_groups", 0) + 1
+        save_json(STATS_FILE, stats)
+
+        logger.info(f"✅ Bot added to group: {chat_title} ({chat_id}) by {adder_name} ({adder_id})")
+
+    except Exception as e:
+        logger.error(f"group_join_logger error: {e}")
+
 
 async def post_init(application):
     await application.bot.delete_webhook(drop_pending_updates=True)
@@ -981,6 +1148,9 @@ def main():
     # Message handler (LAST)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
+    # Group join logger — triggers when bot is added to a group
+    app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, group_join_logger))
+
     # Callbacks
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_error_handler(error_handler)
@@ -991,3 +1161,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    
