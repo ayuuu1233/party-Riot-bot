@@ -730,6 +730,7 @@ async def mood_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             mood_text = " ".join(context.args)
             moods[str(user.id)] = {
                 "name": user.first_name,
+                "username": (user.username or "").lower(),
                 "mood": mood_text,
                 "time": datetime.now().isoformat()
             }
@@ -1006,3 +1007,4 @@ async def poll_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         logger.error(f"Poll error: {e}")
+        
